@@ -14,6 +14,10 @@
 
 #include "../ze_api.h"
 
+#if !defined(__cplusplus)
+#include <stdbool.h>
+#endif
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
