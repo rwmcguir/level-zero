@@ -219,7 +219,7 @@ zelLoaderTranslateHandle(
  *       manage driver resources or perform driver cleanup.
  */
 ZE_DLLEXPORT ze_result_t ZE_APICALL
-zelSetDriverTeardown();
+zelSetDriverTeardown(void);
 
 /**
  * @brief Delays automatic loader context teardown until explicitly requested.
@@ -261,7 +261,7 @@ zelSetDriverTeardown();
  *       remain active until zelLoaderContextTeardown() is explicitly invoked.
  */
 ZE_DLLEXPORT void ZE_APICALL
-zelSetDelayLoaderContextTeardown();
+zelSetDelayLoaderContextTeardown(void);
 
 /**
  * @brief Explicitly tears down the loader's context and releases all associated resources.
@@ -312,7 +312,7 @@ zelSetDelayLoaderContextTeardown();
  *       is considered invalid regardless of any internal errors encountered.
  */
 ZE_DLLEXPORT void ZE_APICALL
-zelLoaderContextTeardown();
+zelLoaderContextTeardown(void);
 
 /**
  * @brief Enables the Level Zero tracing layer at runtime.
@@ -362,7 +362,7 @@ zelLoaderContextTeardown();
  * @see zelGetTracingLayerState() to query current tracing state
  */
 ZE_DLLEXPORT ze_result_t ZE_APICALL
-zelEnableTracingLayer();
+zelEnableTracingLayer(void);
 
 /**
  * @brief Checks whether the loader is currently in teardown state.
@@ -415,7 +415,7 @@ zelEnableTracingLayer();
  *       returns true.
  */
 ZE_DLLEXPORT bool ZE_APICALL
-zelCheckIsLoaderInTearDown();
+zelCheckIsLoaderInTearDown(void);
 
 /**
  * @brief Function pointer type for application-provided teardown callbacks.
@@ -456,7 +456,7 @@ zelCheckIsLoaderInTearDown();
  *
  * @see zelRegisterTeardownCallback() for registering callbacks
  */
-typedef void (*zel_loader_teardown_callback_t)();
+typedef void (*zel_loader_teardown_callback_t)(void);
 
 /**
  * @brief Function pointer type for loader-provided callbacks to notify application of teardown.
@@ -541,7 +541,7 @@ zelRegisterTeardownCallback(
 /// @brief Exported function for Disabling the Tracing Layer During Runtime.
 ///
 ZE_DLLEXPORT ze_result_t ZE_APICALL
-zelDisableTracingLayer();
+zelDisableTracingLayer(void);
 
 /**
  * @brief Retrieves the current enabled state of the Level Zero tracing layer.
