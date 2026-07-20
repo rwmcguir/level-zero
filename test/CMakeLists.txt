@@ -7,6 +7,7 @@ add_executable(
   loader_validation_layer.cpp
   driver_ordering_helper_tests.cpp
   loader_tracing_layer.cpp
+  loader_ext_fn_callback.cpp
 )
 
 # Only include driver_ordering_unit_tests and driver_teardown_unit_tests for static builds or non-Windows platforms
@@ -264,6 +265,15 @@ set_property(TEST tests_tracing_layer_state_enabled_via_environment_and_dynamic 
 add_test(NAME tests_tracing_layer_state_enabled_via_environment_disable_dynamic COMMAND tests --gtest_filter=*TracingLayerState.GivenTracingLayerEnabledViaEnvironmentAndDynamicallyWhenDisablingDynamicTracingThenStateRemainsTrue)
 set_property(TEST tests_tracing_layer_state_enabled_via_environment_disable_dynamic PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1")
 
+# Extension-function callback (zelDriverSetExtensionFunctionCallback) tests
+# Dynamic control suite (toggles tracing at runtime).
+add_test(NAME tests_ext_fn_callback COMMAND tests --gtest_filter=*ExtFnCallback.*)
+set_property(TEST tests_ext_fn_callback PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1")
+
+# Static-enablement suite (ZE_ENABLE_TRACING_LAYER=1, sticky for the process).
+add_test(NAME tests_ext_fn_callback_env COMMAND tests --gtest_filter=*ExtFnCallbackEnviron.*)
+set_property(TEST tests_ext_fn_callback_env PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1;ZE_ENABLE_TRACING_LAYER=1")
+
 add_test(NAME test_zello_world_legacy COMMAND zello_world --enable_legacy_init --enable_null_driver --force_loader_intercepts --enable_validation_layer --enable_tracing_layer --enable_tracing_layer_runtime)
 set_property(TEST test_zello_world_legacy PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1")
 
@@ -494,8 +504,18 @@ foreach(test_name IN ITEMS
     LoaderTranslateHandles.GivenLevelZeroLoaderPresentWhenCallingZelLoaderTranslateHandleInternalWithInterceptEnabledAndDDiSupportEnabledThenExpectNoHandleTranslationForDriver
     LoaderTranslateHandles.GivenLevelZeroLoaderPresentWhenCallingZelLoaderTranslateHandleInternalWithInterceptEnabledAndDDiSupportDisabledThenExpectHandleTranslationForDevice
     LoaderTranslateHandles.GivenLevelZeroLoaderPresentWhenCallingZelLoaderTranslateHandleInternalWithInterceptEnabledAndDDiSupportEnabledThenExpectNoHandleTranslationForDevice)
-  add_test(NAME ${test_name}_alt_drivers COMMAND tests --gtest_filter=*${test_name})
-  set_property(TEST ${test_name}_alt_drivers APPEND PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1;${ALT_DRIVERS_ENV}")
+  # Derive a short, convention-matching ctest name from the long gtest name
+  # (e.g. ...ThenExpectHandleTranslationForCommandQueue -> command_queue).
+  string(REGEX REPLACE ".*ThenExpect(No)?HandleTranslationFor" "" _handle_type "${test_name}")
+  string(REGEX REPLACE "([a-z0-9])([A-Z])" "\\1_\\2" _handle_type "${_handle_type}")
+  string(TOLOWER "${_handle_type}" _handle_type)
+  if(test_name MATCHES "NoHandleTranslation")
+    set(_short_name "tests_loader_translate_handles_${_handle_type}_ddi_enabled_alt_drivers")
+  else()
+    set(_short_name "tests_loader_translate_handles_${_handle_type}_alt_drivers")
+  endif()
+  add_test(NAME ${_short_name} COMMAND tests --gtest_filter=*${test_name})
+  set_property(TEST ${_short_name} APPEND PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1;${ALT_DRIVERS_ENV}")
 endforeach()
 
 add_test(NAME tests_single_driver_sysman_vf_management_api COMMAND tests --gtest_filter=*GivenLevelZeroLoaderPresentWhenCallingSysManVfApisThenExpectNullDriverIsReachedSuccessfully)

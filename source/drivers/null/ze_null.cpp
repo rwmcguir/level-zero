@@ -48,6 +48,33 @@ namespace driver
         };
 
         //////////////////////////////////////////////////////////////////////////
+        // Custom extension-function resolver. Returns real driver pointers by name
+        // for the setter and the sample extension function (the generic intercept
+        // in ze_nullddi.cpp defers to this hook and forwards *ppFunctionAddress).
+        zeDdiTable.Driver.pfnGetExtensionFunctionAddress = [](
+            ze_driver_handle_t,
+            const char* name,
+            void** ppFunctionAddress )
+        {
+            if( nullptr == name || nullptr == ppFunctionAddress )
+                return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+            if( 0 == strcmp( name, "zelDriverSetExtensionFunctionCallback" ) ) {
+                *ppFunctionAddress = reinterpret_cast<void*>( &driver::zelDriverSetExtensionFunctionCallback );
+                return ZE_RESULT_SUCCESS;
+            }
+            if( 0 == strcmp( name, "zelDriverEnableTracing" ) ) {
+                *ppFunctionAddress = reinterpret_cast<void*>( &driver::zelDriverEnableTracing );
+                return ZE_RESULT_SUCCESS;
+            }
+            if( 0 == strcmp( name, "zeSampleExtFunc" ) ) {
+                *ppFunctionAddress = reinterpret_cast<void*>( &driver::zeSampleExtFunc );
+                return ZE_RESULT_SUCCESS;
+            }
+            *ppFunctionAddress = nullptr;
+            return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+        };
+
+        //////////////////////////////////////////////////////////////////////////
         zeDdiTable.Device.pfnGet = [](
             ze_driver_handle_t,
             uint32_t* pCount,
@@ -678,6 +705,80 @@ namespace driver
         pRuntime.Global = &runtimeDdiTable;
         pRuntime.isValidFlag = 1;
         pRuntime.version = ZE_API_VERSION_CURRENT;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// @brief Sample extension function reachable only by name. Its body invokes
+    ///        any registered prologue/epilogue with a typed params block.
+    ze_result_t ZE_APICALL zeSampleExtFunc(
+        ze_driver_handle_t hDriver, uint32_t input, uint32_t* pOutput )
+    {
+        // Snapshot any registered callbacks for this function (name-keyed).
+        context_t::extension_function_callbacks_t cbs;
+        bool haveCbs = false;
+        {
+            std::lock_guard<std::mutex> lock( context.extensionCallbackMutex );
+            auto it = context.extensionCallbacks.find( "zeSampleExtFunc" );
+            if( it != context.extensionCallbacks.end() ) {
+                cbs = it->second;
+                haveCbs = true;
+            }
+        }
+
+        // Two-level gate: callbacks fire only when tracing is globally enabled
+        // AND a callback is registered for this function.
+        const bool fire = haveCbs && context.extensionCallbacksEnabled.load();
+
+        // Typed parameter block the driver exposes to the callbacks.
+        ze_sample_ext_func_params_t params = { &hDriver, &input, &pOutput };
+        void* pInstanceData = nullptr;
+        ze_result_t result = ZE_RESULT_SUCCESS;
+
+        if( fire && nullptr != cbs.prologue )
+            cbs.prologue( &params, result, cbs.pUserData, &pInstanceData );
+
+        // The (trivial) work of the extension function.
+        if( nullptr != pOutput )
+            *pOutput = input * 2;
+
+        if( fire && nullptr != cbs.epilogue )
+            cbs.epilogue( &params, result, cbs.pUserData, &pInstanceData );
+
+        return result;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// @brief Enable/disable this driver's extension-function callbacks (the
+    ///        global gate). Called by the loader when the tracing layer is
+    ///        enabled/disabled.
+    ze_result_t ZE_APICALL zelDriverEnableTracing(
+        ze_driver_handle_t /*hDriver*/, ze_bool_t enable )
+    {
+        context.extensionCallbacksEnabled.store( enable != 0 );
+        return ZE_RESULT_SUCCESS;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// @brief Driver-side registration entry (resolved by name from the loader).
+    ///        Permissive and name-keyed: any name registers; null+null unregisters.
+    ze_result_t ZE_APICALL zelDriverSetExtensionFunctionCallback(
+        ze_driver_handle_t, const char* functionName, void* pUserData,
+        zel_pfnDriverExtensionFunctionCb_t prologue,
+        zel_pfnDriverExtensionFunctionCb_t epilogue )
+    {
+        if( nullptr == functionName )
+            return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+
+        std::lock_guard<std::mutex> lock( context.extensionCallbackMutex );
+        if( nullptr == prologue && nullptr == epilogue ) {
+            context.extensionCallbacks.erase( functionName );
+        } else {
+            auto& entry = context.extensionCallbacks[ functionName ];
+            entry.pUserData = pUserData;
+            entry.prologue = prologue;
+            entry.epilogue = epilogue;
+        }
+        return ZE_RESULT_SUCCESS;
     }
 
     char *context_t::setenv_var_with_driver_id(const std::string &key, uint32_t driverId)

@@ -10,11 +10,16 @@
 #pragma once
 #include <stdlib.h>
 #include <vector>
+#include <map>
+#include <mutex>
+#include <string>
+#include <atomic>
 #include "ze_ddi.h"
 #include "zet_ddi.h"
 #include "zes_ddi.h"
 #include "ze_util.h"
 #include "ze_ddi_common.h"
+#include "loader/ze_loader.h"
 
 #ifndef ZEL_NULL_DRIVER_ID
 #define ZEL_NULL_DRIVER_ID 1
@@ -47,6 +52,23 @@ namespace driver
         std::vector<BaseNullHandle*> globalBaseNullHandle;
 	bool ddiExtensionSupported = false;
 	std::vector<char *> env_vars{};
+
+        // Registry for zelDriverSetExtensionFunctionCallback: maps an extension
+        // function name to the prologue/epilogue the driver invokes from inside
+        // that function's body. Keyed by name (order-independent vs fetch).
+        struct extension_function_callbacks_t {
+            void* pUserData = nullptr;
+            zel_pfnDriverExtensionFunctionCb_t prologue = nullptr;
+            zel_pfnDriverExtensionFunctionCb_t epilogue = nullptr;
+        };
+        std::mutex extensionCallbackMutex;
+        std::map<std::string, extension_function_callbacks_t> extensionCallbacks;
+
+        // Global gate for extension-function callbacks, toggled by the loader via
+        // zelDriverEnableTracing. Callbacks fire only when this is set AND a
+        // callback is registered for the function (two-level gate).
+        std::atomic<bool> extensionCallbacksEnabled{false};
+
         context_t();
         ~context_t();
 
@@ -68,7 +90,36 @@ namespace driver
     uint32_t ZE_APICALL zerTranslateDeviceHandleToIdentifier(ze_device_handle_t hDevice);
     ze_device_handle_t ZE_APICALL zerTranslateIdentifierToDeviceHandle(uint32_t identifier);
     ze_context_handle_t ZE_APICALL zerGetDefaultContext(void);
-    
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Extension-function callback prototype demonstration.
+    //
+    // "zeSampleExtFunc" is a stand-in vendor extension function reachable only by
+    // name via zeDriverGetExtensionFunctionAddress. Its body invokes any
+    // prologue/epilogue registered through zelDriverSetExtensionFunctionCallback,
+    // passing a typed params block (the driver knows its own signature).
+    typedef struct _ze_sample_ext_func_params_t
+    {
+        ze_driver_handle_t* phDriver;
+        uint32_t* pinput;
+        uint32_t** ppOutput;
+    } ze_sample_ext_func_params_t;
+
+    ze_result_t ZE_APICALL zeSampleExtFunc(
+        ze_driver_handle_t hDriver, uint32_t input, uint32_t* pOutput );
+
+    // Driver-side registration entry, resolved by name from the loader's
+    // zelDriverSetExtensionFunctionCallback forward.
+    ze_result_t ZE_APICALL zelDriverSetExtensionFunctionCallback(
+        ze_driver_handle_t hDriver, const char* functionName, void* pUserData,
+        zel_pfnDriverExtensionFunctionCb_t prologue,
+        zel_pfnDriverExtensionFunctionCb_t epilogue );
+
+    // Driver-side enable/disable of extension-function callbacks, resolved by
+    // name from the loader when the tracing layer is enabled/disabled.
+    ze_result_t ZE_APICALL zelDriverEnableTracing(
+        ze_driver_handle_t hDriver, ze_bool_t enable );
+
     extern context_t context;
 } // namespace driver
 

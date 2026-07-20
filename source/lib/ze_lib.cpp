@@ -205,6 +205,10 @@ namespace ze_lib
         if (loaderGetContext == nullptr) {
             std::string message = "ze_lib Context Init() zelLoaderGetContext missing";
             debug_trace_message(message, "");
+        } else {
+            // Cache the loader context portably (the loader symbols are not
+            // link-time visible in the static-loader build).
+            ze_lib::context->loaderContext = loaderGetContext();
         }
 
         std::string version_message = "Loader API Version to be requested is v" + std::to_string(ZE_MAJOR_VERSION(version)) + "." + std::to_string(ZE_MINOR_VERSION(version));
@@ -215,6 +219,7 @@ namespace ze_lib
         if( ZE_RESULT_SUCCESS == result ) {
             tracing_lib = zeLoaderGetTracingHandle();
         }
+        ze_lib::context->loaderContext = loader::context;
 
 #endif
 
@@ -635,6 +640,12 @@ zelEnableTracingLayer()
         if (ze_lib::context->pTracingZerDdiTable != nullptr) {
             ze_lib::context->zerDdiTable.exchange(ze_lib::context->pTracingZerDdiTable);
         }
+        // Propagate the enable to each active driver's extension-function tracing.
+        if (loader::context) {
+            for (auto &drv : loader::context->zeDrivers) {
+                loader::enableDriverExtensionTracing(drv, true);
+            }
+        }
     }
     #endif
     return ZE_RESULT_SUCCESS;
@@ -684,14 +695,91 @@ zelDisableTracingLayer()
     if (ze_lib::context->dynamicTracingSupported == false) {
         return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
     }
-    if (ze_lib::context->tracingLayerEnableCounter.fetch_sub(1) <= 1) {
+    // Guard against underflow: decrement only when the counter is > 0, so a
+    // disable with no matching enable (e.g. under ZE_ENABLE_TRACING_LAYER=1) is a
+    // safe no-op rather than wrapping the unsigned counter and corrupting state.
+    uint32_t prev = ze_lib::context->tracingLayerEnableCounter.load();
+    while (prev > 0 &&
+           !ze_lib::context->tracingLayerEnableCounter.compare_exchange_weak(prev, prev - 1)) {
+        // prev is reloaded by compare_exchange_weak on failure
+    }
+    if (prev == 1) {
+        // 1 -> 0 transition: tear down the dynamic tracing DDI tables.
         ze_lib::context->zeDdiTable.exchange(&ze_lib::context->initialzeDdiTable);
         if (ze_lib::context->pTracingZerDdiTable != nullptr) {
             ze_lib::context->zerDdiTable.exchange(&ze_lib::context->initialzerDdiTable);
         }
+        // Disable per-driver extension tracing, unless tracing was enabled
+        // statically via ZE_ENABLE_TRACING_LAYER (documented to stay on for the
+        // whole application) - respect that sticky state.
+        if (loader::context && !loader::context->tracingLayerEnabled) {
+            for (auto &drv : loader::context->zeDrivers) {
+                loader::enableDriverExtensionTracing(drv, false);
+            }
+        }
     }
     #endif
     return ZE_RESULT_SUCCESS;
+}
+
+ze_result_t ZE_APICALL
+zelDriverSetExtensionFunctionCallback(
+    ze_driver_handle_t hDriver,
+    const char* functionName,
+    void* pUserData,
+    zel_pfnDriverExtensionFunctionCb_t prologue,
+    zel_pfnDriverExtensionFunctionCb_t epilogue
+    )
+{
+    if( nullptr == hDriver )
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    if( nullptr == functionName )
+        return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+    if( ze_lib::destruction )
+        return ZE_RESULT_ERROR_UNINITIALIZED;
+
+    // Type of the driver-side registration entry point, discovered by name.
+    typedef ze_result_t (ZE_APICALL *zelDriverSetExtensionFunctionCallback_t)(
+        ze_driver_handle_t, const char*, void*,
+        zel_pfnDriverExtensionFunctionCb_t, zel_pfnDriverExtensionFunctionCb_t );
+
+    // Resolve the driver's registration entry via the standard extension-address
+    // lookup on this specific driver. The driver owns the registry and the
+    // invocation of the callbacks from inside the extension-function body.
+    auto pfnGetExtensionFunctionAddress =
+        ze_lib::context->zeDdiTable.load()->Driver.pfnGetExtensionFunctionAddress;
+    if( nullptr == pfnGetExtensionFunctionAddress ) {
+        if( !ze_lib::context->isInitialized )
+            return ZE_RESULT_ERROR_UNINITIALIZED;
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+    }
+
+    void* pfnRaw = nullptr;
+    ze_result_t result = pfnGetExtensionFunctionAddress(
+        hDriver, "zelDriverSetExtensionFunctionCallback", &pfnRaw );
+    if( result != ZE_RESULT_SUCCESS )
+        return result;
+    if( nullptr == pfnRaw )
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+
+    // Sync this driver's global extension-tracing gate to the current tracing
+    // state. Covers static ZE_ENABLE_TRACING_LAYER enablement (the driver becomes
+    // usable only by the time the app registers) and drivers registered on after
+    // a dynamic enable. Disabling is handled centrally by zelDisableTracingLayer
+    // (respecting sticky env), so only propagate the enable here.
+    bool tracingOn = ze_lib::context->tracingLayerEnableCounter.load() > 0;
+    if( !tracingOn && ze_lib::context->loaderContext )
+        tracingOn = ze_lib::context->loaderContext->tracingLayerEnabled;
+    if( tracingOn ) {
+        void* pfnEnableRaw = nullptr;
+        if( ZE_RESULT_SUCCESS == pfnGetExtensionFunctionAddress(
+                hDriver, "zelDriverEnableTracing", &pfnEnableRaw ) && pfnEnableRaw ) {
+            reinterpret_cast<zel_pfnDriverEnableTracing_t>(pfnEnableRaw)( hDriver, true );
+        }
+    }
+
+    auto pfnSet = reinterpret_cast<zelDriverSetExtensionFunctionCallback_t>( pfnRaw );
+    return pfnSet( hDriver, functionName, pUserData, prologue, epilogue );
 }
 
 } //extern "c"

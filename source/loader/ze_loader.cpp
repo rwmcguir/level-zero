@@ -8,6 +8,7 @@
 #include "ze_loader_utils.h"
 
 #include "driver_discovery.h"
+#include "../lib/ze_lib.h"
 #include <iostream>
 #include <set>
 
@@ -478,6 +479,20 @@ namespace loader
         return true;
     }
 
+    ze_result_t enableDriverExtensionTracing(driver_t &driver, ze_bool_t enable) {
+        auto pfnGetExtensionFunctionAddress = driver.dditable.ze.Driver.pfnGetExtensionFunctionAddress;
+        if (nullptr == pfnGetExtensionFunctionAddress)
+            return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+
+        void *pfnRaw = nullptr;
+        // Global driver-level hook; the handle is not needed to resolve it.
+        ze_result_t res = pfnGetExtensionFunctionAddress(nullptr, "zelDriverEnableTracing", &pfnRaw);
+        if (res != ZE_RESULT_SUCCESS || nullptr == pfnRaw)
+            return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE; // driver doesn't support it; skip
+
+        return reinterpret_cast<zel_pfnDriverEnableTracing_t>(pfnRaw)(nullptr, enable);
+    }
+
     ze_result_t context_t::init_driver(driver_t &driver, ze_init_flags_t flags, ze_init_driver_type_desc_t* desc) {
         bool loadDriver = false;
         if (debugTraceEnabled) {
@@ -594,6 +609,17 @@ namespace loader
                 debug_trace_message(message, "");
             }
             return ZE_RESULT_ERROR_UNINITIALIZED;
+        }
+
+        // If the tracing layer is already enabled (statically via
+        // ZE_ENABLE_TRACING_LAYER, or dynamically via zelEnableTracingLayer),
+        // propagate the enable to this now-usable driver so env-enabled and
+        // late-loaded drivers participate in extension-function tracing. Done
+        // here (rather than inside the DDI-init block above) because some drivers
+        // populate their dispatch tables during discovery and skip that block.
+        if (tracingLayerEnabled ||
+            (ze_lib::context && ze_lib::context->tracingLayerEnableCounter.load() > 0)) {
+            enableDriverExtensionTracing(driver, true);
         }
 
         return ZE_RESULT_SUCCESS;

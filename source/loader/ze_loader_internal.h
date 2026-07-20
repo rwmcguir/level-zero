@@ -184,4 +184,10 @@ namespace loader
     extern ze_handle_t* loaderDispatch;
     extern zer_dditable_t* defaultZerDdiTable;
     extern context_t *context;
+
+    // Enable/disable extension-function tracing on a single driver by resolving
+    // its "zelDriverEnableTracing" hook by name. No-op (returns UNSUPPORTED) for
+    // drivers that don't implement it. Used to propagate the tracing-layer
+    // enable/disable state (env + dynamic) down to each driver.
+    ze_result_t enableDriverExtensionTracing(driver_t &driver, ze_bool_t enable);
 }
