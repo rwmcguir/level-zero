@@ -265,7 +265,7 @@ set_property(TEST tests_tracing_layer_state_enabled_via_environment_and_dynamic 
 add_test(NAME tests_tracing_layer_state_enabled_via_environment_disable_dynamic COMMAND tests --gtest_filter=*TracingLayerState.GivenTracingLayerEnabledViaEnvironmentAndDynamicallyWhenDisablingDynamicTracingThenStateRemainsTrue)
 set_property(TEST tests_tracing_layer_state_enabled_via_environment_disable_dynamic PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1")
 
-# Extension-function callback (zelDriverSetExtensionFunctionCallback) tests
+# Extension-function callback (zelTracerDriverExtensionRegisterCallback) tests
 # Dynamic control suite (toggles tracing at runtime).
 add_test(NAME tests_ext_fn_callback COMMAND tests --gtest_filter=*ExtFnCallback.*)
 set_property(TEST tests_ext_fn_callback PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1")
@@ -273,6 +273,17 @@ set_property(TEST tests_ext_fn_callback PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_D
 # Static-enablement suite (ZE_ENABLE_TRACING_LAYER=1, sticky for the process).
 add_test(NAME tests_ext_fn_callback_env COMMAND tests --gtest_filter=*ExtFnCallbackEnviron.*)
 set_property(TEST tests_ext_fn_callback_env PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1;ZE_ENABLE_TRACING_LAYER=1")
+
+# Unsupported-driver suite: driver advertises the gate hook but returns
+# UNSUPPORTED when probed, so the loader must never open its gate.
+add_test(NAME tests_ext_fn_callback_unsupported COMMAND tests --gtest_filter=*ExtFnCallbackUnsupported.*)
+set_property(TEST tests_ext_fn_callback_unsupported PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1;ZE_ENABLE_TRACING_LAYER=1;ZEL_TEST_NULL_DRIVER_TRACING_UNSUPPORTED=1")
+
+# Lazy-gate suite: the enable path must skip the per-driver gate until the first
+# extension callback is registered, then open it lazily (install-after-enable).
+# Own process so the monotonic "any callback registered" latch starts clear.
+add_test(NAME tests_ext_fn_callback_lazy_gate COMMAND tests --gtest_filter=*ExtFnCallbackLazyGate.*)
+set_property(TEST tests_ext_fn_callback_lazy_gate PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1")
 
 add_test(NAME test_zello_world_legacy COMMAND zello_world --enable_legacy_init --enable_null_driver --force_loader_intercepts --enable_validation_layer --enable_tracing_layer --enable_tracing_layer_runtime)
 set_property(TEST test_zello_world_legacy PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1")

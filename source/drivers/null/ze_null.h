@@ -53,21 +53,31 @@ namespace driver
 	bool ddiExtensionSupported = false;
 	std::vector<char *> env_vars{};
 
-        // Registry for zelDriverSetExtensionFunctionCallback: maps an extension
-        // function name to the prologue/epilogue the driver invokes from inside
-        // that function's body. Keyed by name (order-independent vs fetch).
-        struct extension_function_callbacks_t {
-            void* pUserData = nullptr;
-            zel_pfnDriverExtensionFunctionCb_t prologue = nullptr;
-            zel_pfnDriverExtensionFunctionCb_t epilogue = nullptr;
+        // Registry for zelDriverSetLoaderCallbackForExtension: maps an extension
+        // function name to the single loader-owned wrapper the driver invokes
+        // from that function's body. The loader/tracing-layer owns the fan-out to
+        // any number of tracers, so the driver stores at most one wrapper (plus
+        // an opaque loader context) per function. Keyed by name (order-
+        // independent vs fetch).
+        struct loader_extension_callbacks_t {
+            zel_pfnDriverExtensionFunctionCb_t loaderPrologue = nullptr;
+            zel_pfnDriverExtensionFunctionCb_t loaderEpilogue = nullptr;
+            void* pLoaderContext = nullptr;
         };
         std::mutex extensionCallbackMutex;
-        std::map<std::string, extension_function_callbacks_t> extensionCallbacks;
+        std::map<std::string, loader_extension_callbacks_t> extensionCallbacks;
 
         // Global gate for extension-function callbacks, toggled by the loader via
         // zelDriverEnableTracing. Callbacks fire only when this is set AND a
         // callback is registered for the function (two-level gate).
         std::atomic<bool> extensionCallbacksEnabled{false};
+
+        // Test observability: counts how many times the loader opened this
+        // driver's extension-tracing gate (zelDriverEnableTracing with
+        // enable=true). Exposed by name via "zelTestGetDriverTracingEnableCount"
+        // so tests can assert the loader skips the gate until a callback is
+        // registered (the lazy-gate optimization).
+        std::atomic<uint32_t> enableTracingTrueCount{0};
 
         context_t();
         ~context_t();
@@ -95,8 +105,8 @@ namespace driver
     // Extension-function callback prototype demonstration.
     //
     // "zeSampleExtFunc" is a stand-in vendor extension function reachable only by
-    // name via zeDriverGetExtensionFunctionAddress. Its body invokes any
-    // prologue/epilogue registered through zelDriverSetExtensionFunctionCallback,
+    // name via zeDriverGetExtensionFunctionAddress. Its body invokes the single
+    // loader-owned wrapper registered through zelDriverSetLoaderCallbackForExtension,
     // passing a typed params block (the driver knows its own signature).
     typedef struct _ze_sample_ext_func_params_t
     {
@@ -108,17 +118,25 @@ namespace driver
     ze_result_t ZE_APICALL zeSampleExtFunc(
         ze_driver_handle_t hDriver, uint32_t input, uint32_t* pOutput );
 
-    // Driver-side registration entry, resolved by name from the loader's
-    // zelDriverSetExtensionFunctionCallback forward.
-    ze_result_t ZE_APICALL zelDriverSetExtensionFunctionCallback(
-        ze_driver_handle_t hDriver, const char* functionName, void* pUserData,
-        zel_pfnDriverExtensionFunctionCb_t prologue,
-        zel_pfnDriverExtensionFunctionCb_t epilogue );
+    // Driver-side loader-callback registration entry, resolved by name from the
+    // tracing layer. Stores the single loader wrapper (+ context) per function;
+    // null+null unregisters.
+    ze_result_t ZE_APICALL zelDriverSetLoaderCallbackForExtension(
+        ze_driver_handle_t hDriver, const char* functionName,
+        zel_pfnDriverExtensionFunctionCb_t loaderPrologue,
+        zel_pfnDriverExtensionFunctionCb_t loaderEpilogue,
+        void* pLoaderContext );
 
     // Driver-side enable/disable of extension-function callbacks, resolved by
     // name from the loader when the tracing layer is enabled/disabled.
     ze_result_t ZE_APICALL zelDriverEnableTracing(
         ze_driver_handle_t hDriver, ze_bool_t enable );
+
+    // Test-only: returns the number of times zelDriverEnableTracing was called
+    // with enable=true (i.e. how many times the loader opened this driver's
+    // extension-tracing gate). Resolved by name "zelTestGetDriverTracingEnableCount".
+    ze_result_t ZE_APICALL zelTestGetDriverTracingEnableCount(
+        ze_driver_handle_t hDriver, uint32_t* pCount );
 
     extern context_t context;
 } // namespace driver

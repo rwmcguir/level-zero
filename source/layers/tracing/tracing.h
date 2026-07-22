@@ -10,6 +10,7 @@
 #include "ze_api.h"
 #include "layers/zel_tracing_api.h"
 #include "layers/zel_tracing_register_cb.h"
+#include "loader/ze_loader.h"
 #include "ze_tracing_cb_structs.h"
 #include "zer_tracing_cb_structs.h"
 
@@ -30,6 +31,18 @@ struct APITracer : _zel_tracer_handle_t {
     virtual zel_zer_all_callbacks_t& getZerProEpilogues(zel_tracer_reg_t callback_type, ze_result_t& result) = 0;
     virtual ze_result_t resetAllCallbacks() = 0;
     virtual ze_result_t enableTracer(ze_bool_t enable) = 0;
+    // Records/clears one extension-function prologue or epilogue slot for
+    // (hDriver, functionName). pPrologueDelta / pEpilogueDelta (optional) each
+    // report whether this tracer's slot for that phase transitioned empty->active
+    // (+1), active->empty (-1), or was unchanged (0), so the caller can refcount
+    // the driver-side wrapper install/uninstall per phase. A single call changes
+    // at most one phase.
+    virtual ze_result_t registerExtensionCallback(ze_driver_handle_t hDriver,
+                                                  const char *functionName,
+                                                  zel_tracer_reg_t callback_type,
+                                                  zel_pfnDriverExtensionFunctionCb_t pCallback,
+                                                  int *pPrologueDelta = nullptr,
+                                                  int *pEpilogueDelta = nullptr) = 0;
 };
 
 ze_result_t createAPITracer(const zel_tracer_desc_t *desc, zel_tracer_handle_t *phTracer);

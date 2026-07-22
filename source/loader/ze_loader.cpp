@@ -479,18 +479,66 @@ namespace loader
         return true;
     }
 
-    ze_result_t enableDriverExtensionTracing(driver_t &driver, ze_bool_t enable) {
+    // Resolve, validate, and cache this driver's global extension-tracing gate
+    // hook exactly once. Normally this happens at driver-init time, but drivers
+    // that bypass init_driver (e.g. null-driver / proc-address-table setups) are
+    // resolved lazily on their first enable/disable toggle instead - hence the
+    // one-shot guard rather than a fixed call site. Resolving the pointer only
+    // proves the symbol exists - a driver may expose a stub that returns
+    // UNSUPPORTED - so we also probe it by invoking with enable=false. That probe
+    // is side-effect-
+    // free at first-init because "disabled" is the default state (the call sets
+    // the gate to the value it already has), yet its return value is the
+    // authoritative capability signal: a real implementation returns SUCCESS, a
+    // stub returns UNSUPPORTED (or another error). Only a SUCCESS probe caches the
+    // hook, so afterwards the cached result is authoritative and runtime toggles
+    // just null-check driver.pfnDriverEnableTracing - no by-name lookup, no
+    // repeated capability query.
+    //
+    // The one-shot guard is essential: resolution can be triggered more than once
+    // per driver (init_driver may run for both zeInitDrivers and zeInit, and the
+    // enable path may also call in), and because the probe writes the gate,
+    // re-running it after tracing was legitimately enabled would clobber the open
+    // gate back to disabled. Probing once - immediately followed by the paired
+    // enable-propagation at the call site - keeps the final state correct.
+    void resolveDriverExtensionTracingHook(driver_t &driver) {
+        if (driver.driverEnableTracingResolved)
+            return;
+        driver.driverEnableTracingResolved = true;
+        driver.pfnDriverEnableTracing = nullptr;
+
         auto pfnGetExtensionFunctionAddress = driver.dditable.ze.Driver.pfnGetExtensionFunctionAddress;
         if (nullptr == pfnGetExtensionFunctionAddress)
-            return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+            return;
 
         void *pfnRaw = nullptr;
         // Global driver-level hook; the handle is not needed to resolve it.
-        ze_result_t res = pfnGetExtensionFunctionAddress(nullptr, "zelDriverEnableTracing", &pfnRaw);
-        if (res != ZE_RESULT_SUCCESS || nullptr == pfnRaw)
+        if (ZE_RESULT_SUCCESS != pfnGetExtensionFunctionAddress(nullptr, "zelDriverEnableTracing", &pfnRaw) ||
+            nullptr == pfnRaw)
+            return;
+
+        // Probe with the benign default (disabled). A driver that truly supports
+        // the gate returns SUCCESS; one that only advertises the symbol returns a
+        // non-SUCCESS result and stays unsupported (cached pointer left null).
+        auto pfnEnableTracing = reinterpret_cast<zel_pfnDriverEnableTracing_t>(pfnRaw);
+        if (ZE_RESULT_SUCCESS == pfnEnableTracing(nullptr, false))
+            driver.pfnDriverEnableTracing = pfnEnableTracing;
+    }
+
+    ze_result_t enableDriverExtensionTracing(driver_t &driver, ze_bool_t enable) {
+        // Ensure the gate hook is resolved and capability-probed. This is a no-op
+        // after the first call (one-shot guard), but it is essential here because
+        // some drivers (e.g. null-driver / proc-address-table setups) initialize
+        // their DDI tables without ever going through init_driver, so this enable
+        // path is their only resolution point. After resolution a null pointer
+        // means the driver does not support extension-function tracing, keeping
+        // the enable/disable toggle a simple null check + call with no per-toggle
+        // lookup or query.
+        resolveDriverExtensionTracingHook(driver);
+        if (nullptr == driver.pfnDriverEnableTracing)
             return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE; // driver doesn't support it; skip
 
-        return reinterpret_cast<zel_pfnDriverEnableTracing_t>(pfnRaw)(nullptr, enable);
+        return driver.pfnDriverEnableTracing(nullptr, enable);
     }
 
     ze_result_t context_t::init_driver(driver_t &driver, ze_init_flags_t flags, ze_init_driver_type_desc_t* desc) {
@@ -611,14 +659,23 @@ namespace loader
             return ZE_RESULT_ERROR_UNINITIALIZED;
         }
 
+        // Resolve this driver's extension-tracing gate hook once, now that its DDI
+        // table is available. Done here (rather than inside the DDI-init block
+        // above) so drivers that populate their dispatch tables during discovery
+        // and skip that block still get their hook resolved deterministically.
+        resolveDriverExtensionTracingHook(driver);
+
         // If the tracing layer is already enabled (statically via
         // ZE_ENABLE_TRACING_LAYER, or dynamically via zelEnableTracingLayer),
         // propagate the enable to this now-usable driver so env-enabled and
         // late-loaded drivers participate in extension-function tracing. Done
         // here (rather than inside the DDI-init block above) because some drivers
         // populate their dispatch tables during discovery and skip that block.
-        if (tracingLayerEnabled ||
-            (ze_lib::context && ze_lib::context->tracingLayerEnableCounter.load() > 0)) {
+        // Skipped entirely until the first extension callback is registered - the
+        // common case registers none, so a late driver need not toggle its gate.
+        if (anyExtensionCallbackRegistered.load() &&
+            (tracingLayerEnabled ||
+             (ze_lib::context && ze_lib::context->tracingLayerEnableCounter.load() > 0))) {
             enableDriverExtensionTracing(driver, true);
         }
 

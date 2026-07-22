@@ -9,6 +9,7 @@
  */
 
 #include "ze_loader_internal.h"
+#include "../lib/ze_lib.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -57,6 +58,37 @@ zeLoaderGetTracingHandle()
 ZE_DLLEXPORT loader::context_t *ZE_APICALL
 zelLoaderGetContext() {
     return loader::context;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Notify the loader that an extension-function tracing callback was
+///        registered (see ze_loader_api.h).
+ZE_DLLEXPORT ze_result_t ZE_APICALL
+zelLoaderTracingLayerRegisterExtensionCallback() {
+    if (nullptr == loader::context)
+        return ZE_RESULT_ERROR_UNINITIALIZED;
+
+    // Monotonic latch: once any extension callback is registered, the toggle
+    // paths resume propagating the per-driver gate. Only the 0 -> 1 transition
+    // needs to open gates now; later registrations are cheap no-ops here.
+    bool wasRegistered = loader::context->anyExtensionCallbackRegistered.exchange(true);
+    if (wasRegistered)
+        return ZE_RESULT_SUCCESS;
+
+    // First registration. If the tracing layer is already active (statically via
+    // ZE_ENABLE_TRACING_LAYER, or dynamically via zelEnableTracingLayer), the
+    // enable path already ran and skipped the per-driver loop because the latch
+    // was false, so open the driver-side gate now (install-after-enable
+    // ordering). Otherwise a subsequent enable opens it. This runs inside the
+    // loader binary, so ze_lib::context->tracingLayerEnableCounter reflects the
+    // authoritative dynamic-enable state for both the dynamic and static builds.
+    if (loader::context->tracingLayerEnabled ||
+        (ze_lib::context && ze_lib::context->tracingLayerEnableCounter.load() > 0)) {
+        for (auto &drv : loader::context->zeDrivers) {
+            loader::enableDriverExtensionTracing(drv, true);
+        }
+    }
+    return ZE_RESULT_SUCCESS;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
