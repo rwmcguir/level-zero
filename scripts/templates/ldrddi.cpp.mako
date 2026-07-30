@@ -373,14 +373,14 @@ namespace loader
         ${item['name']} = ( ${item['name']} ) ? reinterpret_cast<${item['obj']}*>( ${item['name']} )->handle : nullptr;
         %else:
         %if re.match(r"\w+ImageDestroy$", th.make_func_name(n, tags, obj)):
-        // remove the handle from the kernel arugment map
+        // remove the handle from the kernel argument map
         {
             std::lock_guard<std::mutex> lock(context->image_handle_map_lock);
             context->image_handle_map.erase(reinterpret_cast<ze_image_object_t*>(hImage));
         }
         %endif
         %if re.match(r"\w+SamplerDestroy$", th.make_func_name(n, tags, obj)):
-        // remove the handle from the kernel arugment map
+        // remove the handle from the kernel argument map
         {
             std::lock_guard<std::mutex> lock(context->sampler_handle_map_lock);
             context->sampler_handle_map.erase(reinterpret_cast<ze_sampler_object_t*>(hSampler));
@@ -410,7 +410,7 @@ namespace loader
             }
         }
         %endif
-        ## Workaround due to incorrect defintion of phWaitEvents in the ze headers which missed the range values.
+        ## Workaround due to incorrect definition of phWaitEvents in the ze headers which missed the range values.
         ## To be removed once the headers have been updated in a new spec release.
         %if re.match(r"\w+CommandListAppendMetricQueryEnd$", th.make_func_name(n, tags, obj)):
         // convert loader handles to driver handles

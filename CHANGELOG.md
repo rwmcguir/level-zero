@@ -8,12 +8,12 @@
 * Fix: .mako drift from actual headers
 * Fix: Static Analysis Fixes
 * Feature: Enable System Resource Tracker on Windows
-* Removed unnused size_t for to_string in 32b compiles
+* Removed unused size_t for to_string in 32b compiles
 * Use PROJECT_*_DIR instead of CMAKE_*_DIR to support subproject builds
 ## v1.30.0
 * Remove SPDLog from project entirely
 * Add New custom C++ smaller Logger, to replace SPDLog
-* Add future Enhancements to new Logger with available with expiremental =2 settings
+* Add future Enhancements to new Logger with available with experimental =2 settings
 * Fix: Bug where zeInitDrivers was not enabling lifehandle trackers in validation layer
 ## v1.29.0
 * Update to L0 Zero Spec v1.16.24: https://oneapi-src.github.io/level-zero-spec/releases/index.html#level-zero-v1-16-24
@@ -21,7 +21,7 @@
 * Add to_string support support for callbacks (#463)
 ## v1.28.6
 * Remove level-zero* (non-Canonical) package names when building DEBs with CPack
-* Allow pkgconfig file isntallation with Window MSI Installer
+* Allow pkgconfig file installation with Window MSI Installer
 ## v1.28.5
 * Add Canonical Specific packages in CPack (libze1*)
 * Add CONFLICTS, PROVIDES, REPLACES directives in packages
@@ -90,7 +90,7 @@
 * fix: Avoid invalid casting into loader objects when DDI extension is supported
 * Fix potential SIOF issue with checker layers
 ## v1.23.1
-* Fix Sysman only DDI Init for zesDriver compatability
+* Fix Sysman only DDI Init for zesDriver compatibility
 ## v1.23.0
 * fix build for certification checker
 * Fix missing code gen and add check in sysman device get for context
@@ -384,7 +384,7 @@
 * Fixed default symbol visibility in Linux builds
 * Added zeInit call earlier in loader init path to prevent loading drivers that don't match the ze_init_flags_t
 * Fixed build for certain SLES distros
-* Fixed bug that prevented tracers from being reenabled after being disabled. 
+* Fixed bug that prevented tracers from being re-enabled after being disabled. 
 * Multi Driver Support: Return success if initialization of at least one driver succeeds. 
 * Updated L0 API headers to 1.2.43 which includes:
   * Clarification to documentation of several APIs

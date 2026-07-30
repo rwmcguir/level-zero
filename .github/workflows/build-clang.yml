@@ -27,7 +27,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y clang cmake make git
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build Loader (${{ matrix.build_type }}) with Clang on ${{ matrix.container }}
         run: |
           mkdir build

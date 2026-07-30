@@ -694,7 +694,7 @@ class zes_pending_action_t(c_int):
 
 
 ###############################################################################
-## @brief Overclock V-F curve programing.
+## @brief Overclock V-F curve programming.
 class zes_vf_program_type_v(IntEnum):
     VF_ARBITRARY = 0                                                        ## Can program an arbitrary number of V-F points up to the maximum number
                                                                             ## and each point can have arbitrary voltage and frequency values within
@@ -736,7 +736,7 @@ class zes_vf_array_type_t(c_int):
 ## @brief Overclock properties
 ## 
 ## @details
-##     - Information on the overclock domain type and all the contols that are
+##     - Information on the overclock domain type and all the controls that are
 ##       part of the domain.
 class zes_overclock_properties_t(Structure):
     _fields_ = [
@@ -1070,7 +1070,7 @@ class zes_fabric_port_failure_flags_t(c_int):
 ## @brief Unique identifier for a fabric port
 ## 
 ## @details
-##     - This not a universal identifier. The identified is garanteed to be
+##     - This not a universal identifier. The identified is guaranteed to be
 ##       unique for the current hardware configuration of the system. Changes
 ##       in the hardware may result in a different identifier for a given port.
 ##     - The main purpose of this identifier to build up an instantaneous
@@ -1104,7 +1104,7 @@ class zes_fabric_port_properties_t(Structure):
         ("pNext", c_void_p),                                            ## [in,out][optional] must be null or a pointer to an extension-specific
                                                                         ## structure (i.e. contains stype and pNext).
         ("model", c_char * ZES_MAX_FABRIC_PORT_MODEL_SIZE),             ## [out] Description of port technology. Will be set to the string
-                                                                        ## "unkown" if this cannot be determined for this port.
+                                                                        ## "unknown" if this cannot be determined for this port.
         ("onSubdevice", ze_bool_t),                                     ## [out] True if the port is located on a sub-device; false means that
                                                                         ## the port is on the device of the calling Sysman handle
         ("subdeviceId", c_ulong),                                       ## [out] If onSubdevice is true, this gives the ID of the sub-device
@@ -1120,7 +1120,7 @@ class zes_fabric_port_properties_t(Structure):
 class zes_fabric_link_type_t(Structure):
     _fields_ = [
         ("desc", c_char * ZES_MAX_FABRIC_LINK_TYPE_SIZE)                ## [out] Description of link technology. Will be set to the string
-                                                                        ## "unkown" if this cannot be determined for this link.
+                                                                        ## "unknown" if this cannot be determined for this link.
     ]
 
 ###############################################################################
@@ -1624,7 +1624,7 @@ class zes_mem_properties_t(Structure):
 ## @brief Memory state - health, allocated
 ## 
 ## @details
-##     - Percent free is given by 100 * free / pysical mem size.
+##     - Percent free is given by 100 * free / physical mem size.
 class zes_mem_state_t(Structure):
     _fields_ = [
         ("stype", zes_structure_type_t),                                ## [in] type of this structure
@@ -1637,7 +1637,7 @@ class zes_mem_state_t(Structure):
                                                                         ## This member can no longer track the allocatable memory reliably.
                                                                         ## Clients depending on this information can use the 
                                                                         ## zeDeviceGetProperties with ze_device_usablemem_size_ext_properties_t
-                                                                        ## extention to get information of the available usable memory.
+                                                                        ## extension to get information of the available usable memory.
     ]
 
 ###############################################################################

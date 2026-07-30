@@ -34,12 +34,14 @@ jobs:
         python-version: '3.x'
     - name: Install dependencies
       run: pip install Mako==1.1.0 PyYAML==5.2
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
       with:
         clean: true
         fetch-depth: 0
         fetch-tags: true
-        token: ${{ secrets.TOKEN }}
+        # Fall back to the default token when the push secret is unavailable
+        # (e.g. pull_request runs), otherwise checkout@v5 rejects an empty token.
+        token: ${{ secrets.TOKEN || github.token }}
     - name: Checkout develop branch or create local version
       if: ${{ github.event_name == 'workflow_dispatch' }}
       run: git checkout ${{ inputs.branch }} || git checkout -b ${{ inputs.branch }}
@@ -47,7 +49,7 @@ jobs:
       if: ${{ github.event_name == 'workflow_dispatch' }}
       run: git reset --hard origin/master
     - name: Checkout spec repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: ${{ github.event_name == 'pull_request' && 'oneapi-src/level-zero-spec' || inputs.repository }}
         clean: true

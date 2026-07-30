@@ -19,7 +19,7 @@ if(BUILD_STATIC OR NOT WIN32)
 endif()
 
 # For builds on non-Windows platforms, include init_driver_unit_tests
-# The tests rely on ablity to locate fake drivers by specific names which is not possible on Windows.
+# The tests rely on ability to locate fake drivers by specific names which is not possible on Windows.
 if(NOT WIN32)
   target_sources(tests PRIVATE init_driver_unit_tests.cpp)
 endif()

@@ -975,7 +975,7 @@ namespace loader
     __zedlllocal ze_result_t ZE_APICALL
     zesOverclockGetVFPointValues(
         zes_overclock_handle_t hDomainHandle,           ///< [in] Handle for the component domain.
-        zes_vf_type_t VFType,                           ///< [in] Voltage or Freqency point to read.
+        zes_vf_type_t VFType,                           ///< [in] Voltage or Frequency point to read.
         zes_vf_array_type_t VFArrayType,                ///< [in] User,Default or Live VF array to read from
         uint32_t PointIndex,                            ///< [in] Point index - number between (0, max_num_points - 1).
         uint32_t* PointValue                            ///< [out] Returns the frequency in 1kHz units or voltage in millivolt
@@ -1004,7 +1004,7 @@ namespace loader
     __zedlllocal ze_result_t ZE_APICALL
     zesOverclockSetVFPointValues(
         zes_overclock_handle_t hDomainHandle,           ///< [in] Handle for the component domain.
-        zes_vf_type_t VFType,                           ///< [in] Voltage or Freqency point to read.
+        zes_vf_type_t VFType,                           ///< [in] Voltage or Frequency point to read.
         uint32_t PointIndex,                            ///< [in] Point index - number between (0, max_num_points - 1).
         uint32_t PointValue                             ///< [in] Writes frequency in 1kHz units or voltage in millivolt units to
                                                         ///< custom V-F curve at the specified zero-based index 
@@ -3697,7 +3697,7 @@ namespace loader
     __zedlllocal ze_result_t ZE_APICALL
     zesSchedulerSetTimeoutMode(
         zes_sched_handle_t hScheduler,                  ///< [in] Sysman handle for the component.
-        zes_sched_timeout_properties_t* pProperties,    ///< [in] The properties to use when configurating this mode.
+        zes_sched_timeout_properties_t* pProperties,    ///< [in] The properties to use when configuring this mode.
         ze_bool_t* pNeedReload                          ///< [in,out] Will be set to TRUE if a device driver reload is needed to
                                                         ///< apply the new scheduler mode.
         )
@@ -3724,7 +3724,7 @@ namespace loader
     __zedlllocal ze_result_t ZE_APICALL
     zesSchedulerSetTimesliceMode(
         zes_sched_handle_t hScheduler,                  ///< [in] Sysman handle for the component.
-        zes_sched_timeslice_properties_t* pProperties,  ///< [in] The properties to use when configurating this mode.
+        zes_sched_timeslice_properties_t* pProperties,  ///< [in] The properties to use when configuring this mode.
         ze_bool_t* pNeedReload                          ///< [in,out] Will be set to TRUE if a device driver reload is needed to
                                                         ///< apply the new scheduler mode.
         )

@@ -19,7 +19,7 @@ jobs:
       short-sha: ${{ steps.const.outputs.short-sha }}
       ref-slug: ${{ steps.const.outputs.ref-slug }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         clean: true
         ref: ${{ github.event.pull_request.head.sha }}
@@ -86,7 +86,7 @@ jobs:
         image-name=ghcr.io/${{ github.repository }}/${OS_STRING}
         ccache-dir=${CCACHE_DIR}
         EOF
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         clean: true
         fetch-depth: 0

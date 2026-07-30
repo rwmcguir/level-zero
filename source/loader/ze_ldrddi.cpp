@@ -4003,7 +4003,7 @@ namespace loader
         if( nullptr == pfnDestroy )
             return ZE_RESULT_ERROR_UNINITIALIZED;
 
-        // remove the handle from the kernel arugment map
+        // remove the handle from the kernel argument map
         {
             std::lock_guard<std::mutex> lock(context->image_handle_map_lock);
             context->image_handle_map.erase(reinterpret_cast<ze_image_object_t*>(hImage));
@@ -5584,7 +5584,7 @@ namespace loader
         if( nullptr == pfnDestroy )
             return ZE_RESULT_ERROR_UNINITIALIZED;
 
-        // remove the handle from the kernel arugment map
+        // remove the handle from the kernel argument map
         {
             std::lock_guard<std::mutex> lock(context->sampler_handle_map_lock);
             context->sampler_handle_map.erase(reinterpret_cast<ze_sampler_object_t*>(hSampler));

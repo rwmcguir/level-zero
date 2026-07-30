@@ -275,7 +275,7 @@ namespace validation_layer
     {
         auto it = counts.find(functionName);
 
-        // make sure there is no insertion happening during program exeuction
+        // make sure there is no insertion happening during program execution
         // as inserting to the map is not thread safe
         if (it == counts.end()) {
             return;

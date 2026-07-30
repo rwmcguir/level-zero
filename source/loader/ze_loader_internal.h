@@ -35,9 +35,9 @@ namespace loader
     typedef enum _zel_driver_type_t
     {
         ZEL_DRIVER_TYPE_DISCRETE_GPU= 0,          ///< The driver has Discrete GPUs only
-        ZEL_DRIVER_TYPE_GPU = 1,                  ///< The driver has Heterogenous GPU types
+        ZEL_DRIVER_TYPE_GPU = 1,                  ///< The driver has Heterogeneous GPU types
         ZEL_DRIVER_TYPE_INTEGRATED_GPU = 2,       ///< The driver has Integrated GPUs only
-        ZEL_DRIVER_TYPE_MIXED = 3,                ///< The driver has Heterogenous driver types not limited to GPU or NPU.
+        ZEL_DRIVER_TYPE_MIXED = 3,                ///< The driver has Heterogeneous driver types not limited to GPU or NPU.
         ZEL_DRIVER_TYPE_OTHER = 4,                ///< The driver has No GPU Devices and has other device types only
         ZEL_DRIVER_TYPE_NPU = 5,                  ///< The driver has NPU devices only
         ZEL_DRIVER_TYPE_FORCE_UINT32 = 0x7fffffff

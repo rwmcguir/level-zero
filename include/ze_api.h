@@ -2341,8 +2341,8 @@ zeDeviceGetModuleProperties(
 typedef uint32_t ze_command_queue_group_property_flags_t;
 typedef enum _ze_command_queue_group_property_flag_t
 {
-    ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE = ZE_BIT(0),               ///< Command queue group supports enqueing compute commands.
-    ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY = ZE_BIT(1),                  ///< Command queue group supports enqueing copy commands.
+    ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE = ZE_BIT(0),               ///< Command queue group supports enqueuing compute commands.
+    ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY = ZE_BIT(1),                  ///< Command queue group supports enqueuing copy commands.
     ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS = ZE_BIT(2),   ///< Command queue group supports cooperative kernels.
                                                                             ///< See ::zeCommandListAppendLaunchCooperativeKernel for more details.
     ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_METRICS = ZE_BIT(3),               ///< Command queue groups supports metric queries.
@@ -9436,7 +9436,7 @@ zeCommandListAppendLaunchKernelIndirect(
 ///       the Host or device up until execution.
 ///     - This may **only** be called for a command list created with command
 ///       queue group ordinal that supports compute.
-///     - The application must enusre the command list, kernel and events were
+///     - The application must ensure the command list, kernel and events were
 ///       created, and the memory was allocated, on the same context.
 ///     - This function may **not** be called from simultaneous threads with the
 ///       same command list handle.
@@ -11230,7 +11230,7 @@ typedef enum _ze_power_saving_hint_exp_version_t
 /// @brief Supported device types
 typedef enum _ze_power_saving_hint_type_t
 {
-    ZE_POWER_SAVING_HINT_TYPE_MIN = 0,                                      ///< Minumum power savings. The device will make no attempt to save power
+    ZE_POWER_SAVING_HINT_TYPE_MIN = 0,                                      ///< Minimum power savings. The device will make no attempt to save power
                                                                             ///< while executing work submitted to this context.
     ZE_POWER_SAVING_HINT_TYPE_MAX = 100,                                    ///< Maximum power savings. The device will do everything to bring power to
                                                                             ///< a minimum while executing work submitted to this context.
@@ -11911,7 +11911,7 @@ typedef struct _ze_memory_free_ext_desc_t
 /// 
 /// @details
 ///     - Similar to zeMemFree, with added parameter to choose the free policy.
-///     - Does not gaurantee memory is freed upon return. See free policy
+///     - Does not guarantee memory is freed upon return. See free policy
 ///       descriptions for details.
 ///     - The application must **not** call this function from simultaneous
 ///       threads with the same pointer.
@@ -12172,7 +12172,7 @@ typedef struct _ze_fabric_edge_exp_properties_t
                                                                             ///< structure (i.e. contains stype and pNext).
     ze_uuid_t uuid;                                                         ///< [out] universal unique identifier.
     char model[ZE_MAX_FABRIC_EDGE_MODEL_EXP_SIZE];                          ///< [out] Description of fabric edge technology. Will be set to the string
-                                                                            ///< "unkown" if this cannot be determined for this edge
+                                                                            ///< "unknown" if this cannot be determined for this edge
     uint32_t bandwidth;                                                     ///< [out] design bandwidth
     ze_bandwidth_unit_t bandwidthUnit;                                      ///< [out] bandwidth unit
     uint32_t latency;                                                       ///< [out] design latency
@@ -13970,7 +13970,7 @@ typedef struct _ze_pitched_alloc_2dimage_linear_pitch_exp_info_t
     ze_structure_type_t stype;                                              ///< [in] type of this structure
     void* pNext;                                                            ///< [in,out][optional] must be null or a pointer to an extension-specific
                                                                             ///< structure (i.e. contains stype and pNext).
-    size_t pitchAlign;                                                      ///< [out] Required pitch Aligment in Bytes.
+    size_t pitchAlign;                                                      ///< [out] Required pitch Alignment in Bytes.
     size_t maxSupportedPitch;                                               ///< [out] Maximum allowed pitch in Bytes.
 
 } ze_pitched_alloc_2dimage_linear_pitch_exp_info_t;
@@ -14062,8 +14062,8 @@ typedef struct _ze_custom_pitch_exp_desc_t
                                                                             ///< allocations. This pitch should satisfy the pitchAlign requirement in
                                                                             ///< ::ze_pitched_alloc_2dimage_linear_pitch_exp_info_t 
     size_t slicePitch;                                                      ///< [in] user programmed slice pitch , must be multiple of rowPitch.  For
-                                                                            ///< 2D image arrary or a slice of a 3D image array - this pitch should be
-                                                                            ///< >= rowPitch * image_height . For 1D iamge array >= rowPitch.
+                                                                            ///< 2D image array or a slice of a 3D image array - this pitch should be
+                                                                            ///< >= rowPitch * image_height . For 1D image array >= rowPitch.
 
 } ze_custom_pitch_exp_desc_t;
 
@@ -14305,7 +14305,7 @@ typedef struct _ze_mutable_command_id_exp_desc_t
                                                                             ///<  - must be 0 (default, equivalent to setting all flags bar kernel
                                                                             ///< instruction), or a valid combination of ::ze_mutable_command_exp_flag_t
                                                                             ///<  - in order to include kernel instruction mutation,
-                                                                            ///< ::ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION must be explictly included
+                                                                            ///< ::ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION must be explicitly included
 
 } ze_mutable_command_id_exp_desc_t;
 
@@ -15875,9 +15875,9 @@ zeDriverRTASFormatCompatibilityCheckExt(
 ///     - All provided data buffers must be host-accessible. The referenced
 ///       scene data (index- and vertex- buffers) have to be accessible from the
 ///       host, and will **not** be referenced by the build acceleration structure.
-///     - The acceleration structure buffer is typicall a host allocation that
+///     - The acceleration structure buffer is typically a host allocation that
 ///       is later manually copied to a device allocation. Alternatively one can
-///       also use a shared USM allocation as acceration structure buffer and
+///       also use a shared USM allocation as acceleration structure buffer and
 ///       skip the copy.
 ///     - A successfully constructed acceleration structure is entirely
 ///       self-contained. There is no requirement for input data to persist
@@ -16456,7 +16456,7 @@ typedef struct _ze_device_usablemem_size_ext_properties_t
     uint64_t currUsableMemSize;                                             ///< [out] Returns the available usable memory at the device level. This is
                                                                             ///< typically less than or equal to the available physical memory on the
                                                                             ///< device. It important to note that usable memory size reported is
-                                                                            ///< transient in nature and cannot be used to reliably guarentee success
+                                                                            ///< transient in nature and cannot be used to reliably guarantee success
                                                                             ///< of future allocations. The usable memory includes all the memory that
                                                                             ///< the clients can allocate for their use and by L0 Core for its internal
                                                                             ///< allocations.

@@ -518,7 +518,7 @@ class zet_metric_query_pool_desc_t(Structure):
     ]
 
 ###############################################################################
-## @brief Supportted profile features
+## @brief Supported profile features
 class zet_profile_flags_v(IntEnum):
     REGISTER_REALLOCATION = ZE_BIT(0)                                       ## request the compiler attempt to minimize register usage as much as
                                                                             ## possible to allow for instrumentation

@@ -925,7 +925,7 @@ zetDebugGetRegisterSetProperties(
 ///     - ::ZE_RESULT_ERROR_NOT_AVAILABLE
 ///         + the thread is running or unavailable
 ///     - ::ZE_RESULT_ERROR_INVALID_ARGUMENT
-///         + the thread argument specifies more than one or a non-existant thread
+///         + the thread argument specifies more than one or a non-existent thread
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zetDebugGetThreadRegisterSetProperties(
     zet_debug_session_handle_t hDebug,                                      ///< [in] debug session handle
@@ -1886,7 +1886,7 @@ zetMetricQueryGetData(
 #pragma region pin
 #endif
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Supportted profile features
+/// @brief Supported profile features
 typedef uint32_t zet_profile_flags_t;
 typedef enum _zet_profile_flag_t
 {

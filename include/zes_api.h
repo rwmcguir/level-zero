@@ -1633,7 +1633,7 @@ typedef enum _zes_pending_action_t
 } zes_pending_action_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Overclock V-F curve programing.
+/// @brief Overclock V-F curve programming.
 typedef enum _zes_vf_program_type_t
 {
     ZES_VF_PROGRAM_TYPE_VF_ARBITRARY = 0,                                   ///< Can program an arbitrary number of V-F points up to the maximum number
@@ -1672,7 +1672,7 @@ typedef enum _zes_vf_array_type_t
 /// @brief Overclock properties
 /// 
 /// @details
-///     - Information on the overclock domain type and all the contols that are
+///     - Information on the overclock domain type and all the controls that are
 ///       part of the domain.
 typedef struct _zes_overclock_properties_t
 {
@@ -2233,7 +2233,7 @@ zesOverclockGetControlState(
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zesOverclockGetVFPointValues(
     zes_overclock_handle_t hDomainHandle,                                   ///< [in] Handle for the component domain.
-    zes_vf_type_t VFType,                                                   ///< [in] Voltage or Freqency point to read.
+    zes_vf_type_t VFType,                                                   ///< [in] Voltage or Frequency point to read.
     zes_vf_array_type_t VFArrayType,                                        ///< [in] User,Default or Live VF array to read from
     uint32_t PointIndex,                                                    ///< [in] Point index - number between (0, max_num_points - 1).
     uint32_t* PointValue                                                    ///< [out] Returns the frequency in 1kHz units or voltage in millivolt
@@ -2270,7 +2270,7 @@ zesOverclockGetVFPointValues(
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zesOverclockSetVFPointValues(
     zes_overclock_handle_t hDomainHandle,                                   ///< [in] Handle for the component domain.
-    zes_vf_type_t VFType,                                                   ///< [in] Voltage or Freqency point to read.
+    zes_vf_type_t VFType,                                                   ///< [in] Voltage or Frequency point to read.
     uint32_t PointIndex,                                                    ///< [in] Point index - number between (0, max_num_points - 1).
     uint32_t PointValue                                                     ///< [in] Writes frequency in 1kHz units or voltage in millivolt units to
                                                                             ///< custom V-F curve at the specified zero-based index 
@@ -3130,7 +3130,7 @@ typedef enum _zes_fabric_port_failure_flag_t
 /// @brief Unique identifier for a fabric port
 /// 
 /// @details
-///     - This not a universal identifier. The identified is garanteed to be
+///     - This not a universal identifier. The identified is guaranteed to be
 ///       unique for the current hardware configuration of the system. Changes
 ///       in the hardware may result in a different identifier for a given port.
 ///     - The main purpose of this identifier to build up an instantaneous
@@ -3166,7 +3166,7 @@ typedef struct _zes_fabric_port_properties_t
     void* pNext;                                                            ///< [in,out][optional] must be null or a pointer to an extension-specific
                                                                             ///< structure (i.e. contains stype and pNext).
     char model[ZES_MAX_FABRIC_PORT_MODEL_SIZE];                             ///< [out] Description of port technology. Will be set to the string
-                                                                            ///< "unkown" if this cannot be determined for this port.
+                                                                            ///< "unknown" if this cannot be determined for this port.
     ze_bool_t onSubdevice;                                                  ///< [out] True if the port is located on a sub-device; false means that
                                                                             ///< the port is on the device of the calling Sysman handle
     uint32_t subdeviceId;                                                   ///< [out] If onSubdevice is true, this gives the ID of the sub-device
@@ -3183,7 +3183,7 @@ typedef struct _zes_fabric_port_properties_t
 typedef struct _zes_fabric_link_type_t
 {
     char desc[ZES_MAX_FABRIC_LINK_TYPE_SIZE];                               ///< [out] Description of link technology. Will be set to the string
-                                                                            ///< "unkown" if this cannot be determined for this link.
+                                                                            ///< "unknown" if this cannot be determined for this link.
 
 } zes_fabric_link_type_t;
 
@@ -5279,7 +5279,7 @@ typedef struct _zes_mem_properties_t
 /// @brief Memory state - health, allocated
 /// 
 /// @details
-///     - Percent free is given by 100 * free / pysical mem size.
+///     - Percent free is given by 100 * free / physical mem size.
 typedef struct _zes_mem_state_t
 {
     zes_structure_type_t stype;                                             ///< [in] type of this structure
@@ -5292,7 +5292,7 @@ typedef struct _zes_mem_state_t
                                                                             ///< This member can no longer track the allocatable memory reliably.
                                                                             ///< Clients depending on this information can use the 
                                                                             ///< zeDeviceGetProperties with ze_device_usablemem_size_ext_properties_t
-                                                                            ///< extention to get information of the available usable memory.
+                                                                            ///< extension to get information of the available usable memory.
 
 } zes_mem_state_t;
 
@@ -6900,7 +6900,7 @@ zesSchedulerGetTimesliceModeProperties(
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zesSchedulerSetTimeoutMode(
     zes_sched_handle_t hScheduler,                                          ///< [in] Sysman handle for the component.
-    zes_sched_timeout_properties_t* pProperties,                            ///< [in] The properties to use when configurating this mode.
+    zes_sched_timeout_properties_t* pProperties,                            ///< [in] The properties to use when configuring this mode.
     ze_bool_t* pNeedReload                                                  ///< [in,out] Will be set to TRUE if a device driver reload is needed to
                                                                             ///< apply the new scheduler mode.
     );
@@ -6940,7 +6940,7 @@ zesSchedulerSetTimeoutMode(
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zesSchedulerSetTimesliceMode(
     zes_sched_handle_t hScheduler,                                          ///< [in] Sysman handle for the component.
-    zes_sched_timeslice_properties_t* pProperties,                          ///< [in] The properties to use when configurating this mode.
+    zes_sched_timeslice_properties_t* pProperties,                          ///< [in] The properties to use when configuring this mode.
     ze_bool_t* pNeedReload                                                  ///< [in,out] Will be set to TRUE if a device driver reload is needed to
                                                                             ///< apply the new scheduler mode.
     );

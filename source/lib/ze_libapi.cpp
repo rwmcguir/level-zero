@@ -11395,7 +11395,7 @@ zeCommandListAppendLaunchKernelIndirect(
 ///       the Host or device up until execution.
 ///     - This may **only** be called for a command list created with command
 ///       queue group ordinal that supports compute.
-///     - The application must enusre the command list, kernel and events were
+///     - The application must ensure the command list, kernel and events were
 ///       created, and the memory was allocated, on the same context.
 ///     - This function may **not** be called from simultaneous threads with the
 ///       same command list handle.
@@ -13678,7 +13678,7 @@ zeModuleInspectLinkageExt(
 /// 
 /// @details
 ///     - Similar to zeMemFree, with added parameter to choose the free policy.
-///     - Does not gaurantee memory is freed upon return. See free policy
+///     - Does not guarantee memory is freed upon return. See free policy
 ///       descriptions for details.
 ///     - The application must **not** call this function from simultaneous
 ///       threads with the same pointer.
@@ -16578,9 +16578,9 @@ zeDriverRTASFormatCompatibilityCheckExt(
 ///     - All provided data buffers must be host-accessible. The referenced
 ///       scene data (index- and vertex- buffers) have to be accessible from the
 ///       host, and will **not** be referenced by the build acceleration structure.
-///     - The acceleration structure buffer is typicall a host allocation that
+///     - The acceleration structure buffer is typically a host allocation that
 ///       is later manually copied to a device allocation. Alternatively one can
-///       also use a shared USM allocation as acceration structure buffer and
+///       also use a shared USM allocation as acceleration structure buffer and
 ///       skip the copy.
 ///     - A successfully constructed acceleration structure is entirely
 ///       self-contained. There is no requirement for input data to persist

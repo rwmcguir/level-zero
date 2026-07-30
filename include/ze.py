@@ -939,8 +939,8 @@ class ze_device_module_properties_t(Structure):
 ###############################################################################
 ## @brief Supported command queue group property flags
 class ze_command_queue_group_property_flags_v(IntEnum):
-    COMPUTE = ZE_BIT(0)                                                     ## Command queue group supports enqueing compute commands.
-    COPY = ZE_BIT(1)                                                        ## Command queue group supports enqueing copy commands.
+    COMPUTE = ZE_BIT(0)                                                     ## Command queue group supports enqueuing compute commands.
+    COPY = ZE_BIT(1)                                                        ## Command queue group supports enqueuing copy commands.
     COOPERATIVE_KERNELS = ZE_BIT(2)                                         ## Command queue group supports cooperative kernels.
                                                                             ## See ::zeCommandListAppendLaunchCooperativeKernel for more details.
     METRICS = ZE_BIT(3)                                                     ## Command queue groups supports metric queries.
@@ -2852,7 +2852,7 @@ class ze_power_saving_hint_exp_version_t(c_int):
 ###############################################################################
 ## @brief Supported device types
 class ze_power_saving_hint_type_v(IntEnum):
-    MIN = 0                                                                 ## Minumum power savings. The device will make no attempt to save power
+    MIN = 0                                                                 ## Minimum power savings. The device will make no attempt to save power
                                                                             ## while executing work submitted to this context.
     MAX = 100                                                               ## Maximum power savings. The device will do everything to bring power to
                                                                             ## a minimum while executing work submitted to this context.
@@ -3387,7 +3387,7 @@ class ze_fabric_edge_exp_properties_t(Structure):
                                                                         ## structure (i.e. contains stype and pNext).
         ("uuid", ze_uuid_t),                                            ## [out] universal unique identifier.
         ("model", c_char * ZE_MAX_FABRIC_EDGE_MODEL_EXP_SIZE),          ## [out] Description of fabric edge technology. Will be set to the string
-                                                                        ## "unkown" if this cannot be determined for this edge
+                                                                        ## "unknown" if this cannot be determined for this edge
         ("bandwidth", c_ulong),                                         ## [out] design bandwidth
         ("bandwidthUnit", ze_bandwidth_unit_t),                         ## [out] bandwidth unit
         ("latency", c_ulong),                                           ## [out] design latency
@@ -4360,7 +4360,7 @@ class ze_pitched_alloc_2dimage_linear_pitch_exp_info_t(Structure):
         ("stype", ze_structure_type_t),                                 ## [in] type of this structure
         ("pNext", c_void_p),                                            ## [in,out][optional] must be null or a pointer to an extension-specific
                                                                         ## structure (i.e. contains stype and pNext).
-        ("pitchAlign", c_size_t),                                       ## [out] Required pitch Aligment in Bytes.
+        ("pitchAlign", c_size_t),                                       ## [out] Required pitch Alignment in Bytes.
         ("maxSupportedPitch", c_size_t)                                 ## [out] Maximum allowed pitch in Bytes.
     ]
 
@@ -4377,8 +4377,8 @@ class ze_custom_pitch_exp_desc_t(Structure):
                                                                         ## allocations. This pitch should satisfy the pitchAlign requirement in
                                                                         ## ::ze_pitched_alloc_2dimage_linear_pitch_exp_info_t 
         ("slicePitch", c_size_t)                                        ## [in] user programmed slice pitch , must be multiple of rowPitch.  For
-                                                                        ## 2D image arrary or a slice of a 3D image array - this pitch should be
-                                                                        ## >= rowPitch * image_height . For 1D iamge array >= rowPitch.
+                                                                        ## 2D image array or a slice of a 3D image array - this pitch should be
+                                                                        ## >= rowPitch * image_height . For 1D image array >= rowPitch.
     ]
 
 ###############################################################################
@@ -4455,7 +4455,7 @@ class ze_mutable_command_id_exp_desc_t(Structure):
                                                                         ##  - must be 0 (default, equivalent to setting all flags bar kernel
                                                                         ## instruction), or a valid combination of ::ze_mutable_command_exp_flag_t
                                                                         ##  - in order to include kernel instruction mutation,
-                                                                        ## ::ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION must be explictly included
+                                                                        ## ::ZE_MUTABLE_COMMAND_EXP_FLAG_KERNEL_INSTRUCTION must be explicitly included
     ]
 
 ###############################################################################
@@ -5487,7 +5487,7 @@ class ze_device_usablemem_size_ext_properties_t(Structure):
         ("currUsableMemSize", c_ulonglong)                              ## [out] Returns the available usable memory at the device level. This is
                                                                         ## typically less than or equal to the available physical memory on the
                                                                         ## device. It important to note that usable memory size reported is
-                                                                        ## transient in nature and cannot be used to reliably guarentee success
+                                                                        ## transient in nature and cannot be used to reliably guarantee success
                                                                         ## of future allocations. The usable memory includes all the memory that
                                                                         ## the clients can allocate for their use and by L0 Core for its internal
                                                                         ## allocations.

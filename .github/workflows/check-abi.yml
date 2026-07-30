@@ -16,7 +16,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y elfutils universal-ctags vtable-dumper
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0 # Required due to the way Git works, without it this action won't be able to find any or the correct tags
     - uses: actions-ecosystem/action-get-latest-tag@v1
@@ -24,13 +24,13 @@ jobs:
       with:
         semver_only: true
     - name: Checkout base
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
       with:
         ref: ${{ steps.get-latest-tag.outputs.tag }}
         clean: true
         path: base
     - name: Checkout head
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
       with:
         clean: true
         path: head
@@ -92,13 +92,13 @@ jobs:
         sudo apt update
         sudo apt install -y elfutils universal-ctags vtable-dumper
     - name: Checkout base
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
       with:
         ref: ${{ github.base_ref }}
         clean: true
         path: base
     - name: Checkout head
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
       with:
         clean: true
         path: head
