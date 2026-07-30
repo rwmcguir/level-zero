@@ -285,6 +285,12 @@ set_property(TEST tests_ext_fn_callback_unsupported PROPERTY ENVIRONMENT "ZE_ENA
 add_test(NAME tests_ext_fn_callback_lazy_gate COMMAND tests --gtest_filter=*ExtFnCallbackLazyGate.*)
 set_property(TEST tests_ext_fn_callback_lazy_gate PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1")
 
+# Destroy-cleanup suite: destroying a tracer must release its share of the
+# driver-side extension-wrapper install refcounts (and only its share). Own
+# process so the driver install state starts clean.
+add_test(NAME tests_ext_fn_callback_destroy_cleanup COMMAND tests --gtest_filter=*ExtFnCallbackDestroyCleanup.*)
+set_property(TEST tests_ext_fn_callback_destroy_cleanup PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1;ZE_ENABLE_NULL_DRIVER=1")
+
 add_test(NAME test_zello_world_legacy COMMAND zello_world --enable_legacy_init --enable_null_driver --force_loader_intercepts --enable_validation_layer --enable_tracing_layer --enable_tracing_layer_runtime)
 set_property(TEST test_zello_world_legacy PROPERTY ENVIRONMENT "ZE_ENABLE_LOADER_DEBUG_TRACE=1")
 

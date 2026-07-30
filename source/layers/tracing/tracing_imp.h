@@ -60,6 +60,10 @@ struct ExtensionFunctionCallbacks {
 struct LoaderExtensionContext {
     ze_driver_handle_t hDriver;
     std::string functionName;
+    // Lookup key built once at construction. Both wrapper functions run on every
+    // traced call, so precomputing the key here avoids copying functionName into a
+    // temporary ExtensionFunctionKey (and its heap allocation) on the hot path.
+    ExtensionFunctionKey key;
     // True while the epilogue trampoline is installed on the driver for this key.
     // Read (lock-free) by the prologue wrapper to decide whether to allocate a
     // per-call frame that threads instance data to the epilogue; written under the
@@ -67,7 +71,7 @@ struct LoaderExtensionContext {
     // never builds a frame the driver will not hand back to an epilogue.
     std::atomic<bool> epilogueInstalled{false};
     LoaderExtensionContext(ze_driver_handle_t driver, const char *name)
-        : hDriver(driver), functionName(name) {}
+        : hDriver(driver), functionName(name), key{driver, name} {}
 };
 
 typedef struct tracer_array_entry {
@@ -109,6 +113,9 @@ struct APITracerImp : APITracer {
                                           zel_pfnDriverExtensionFunctionCb_t pCallback,
                                           int *pPrologueDelta = nullptr,
                                           int *pEpilogueDelta = nullptr) override;
+
+    std::vector<TracerExtensionRegistration>
+    snapshotExtensionRegistrations() override;
 
     tracer_array_entry_t tracerFunctions;
     tracingState_t tracingState;

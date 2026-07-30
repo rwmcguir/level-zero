@@ -138,6 +138,12 @@ namespace driver
     ze_result_t ZE_APICALL zelTestGetDriverTracingEnableCount(
         ze_driver_handle_t hDriver, uint32_t* pCount );
 
+    // Test-only: reports which loader wrapper phases are installed for a named
+    // extension function. *pFlags bit0 = prologue installed, bit1 = epilogue
+    // installed. Resolved by name "zelTestGetDriverExtensionInstallState".
+    ze_result_t ZE_APICALL zelTestGetDriverExtensionInstallState(
+        ze_driver_handle_t hDriver, const char* functionName, uint32_t* pFlags );
+
     extern context_t context;
 } // namespace driver
 

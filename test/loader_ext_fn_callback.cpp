@@ -700,4 +700,82 @@ TEST(ExtFnCallbackLazyGate, LayerEnableSkipsGateUntilRegister) {
   EXPECT_EQ(ZE_RESULT_SUCCESS, zelDisableTracingLayer());
 }
 
+// ---------------------------------------------------------------------------
+// Destroy-cleanup suite: proves that destroying a tracer releases its share of
+// the driver-side extension-wrapper install refcounts (so a destroyed tracer no
+// longer forces the wrapper installed), while co-registered tracers on the same
+// function keep theirs. Install state is toggled purely by register/destroy
+// (independent of the layer enable), so these run without enabling tracing.
+// ---------------------------------------------------------------------------
+
+typedef ze_result_t (ZE_APICALL *pfnGetInstallState_t)(ze_driver_handle_t,
+                                                       const char*, uint32_t*);
+
+pfnGetInstallState_t getInstallStateFunc(ze_driver_handle_t hDriver) {
+  void* addr = nullptr;
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zeDriverGetExtensionFunctionAddress(
+                hDriver, "zelTestGetDriverExtensionInstallState", &addr));
+  EXPECT_NE(nullptr, addr);
+  return reinterpret_cast<pfnGetInstallState_t>(addr);
+}
+
+uint32_t installState(pfnGetInstallState_t fn, ze_driver_handle_t hDriver) {
+  uint32_t flags = 0xFFu;
+  EXPECT_EQ(ZE_RESULT_SUCCESS, fn(hDriver, "zeSampleExtFunc", &flags));
+  return flags;
+}
+
+void registerEpilogueOnly(zel_tracer_handle_t hTracer,
+                          ze_driver_handle_t hDriver) {
+  EXPECT_EQ(ZE_RESULT_SUCCESS,
+            zelTracerDriverExtensionRegisterCallback(
+                hTracer, hDriver, "zeSampleExtFunc", ZEL_REGISTER_EPILOGUE,
+                epilogueCb));
+}
+
+TEST(ExtFnCallbackDestroyCleanup, DestroyReleasesInstallWithoutUnregister) {
+  auto hDriver = getFirstDriver();
+  auto getState = getInstallStateFunc(hDriver);
+
+  ASSERT_EQ(0u, installState(getState, hDriver)) << "stale install at start";
+
+  CallbackState state;
+  auto hTracer = createTracer(&state);
+  registerCbs(hTracer, hDriver, "zeSampleExtFunc"); // prologue + epilogue
+  EXPECT_EQ(0x3u, installState(getState, hDriver))
+      << "both phases should be installed after registration";
+
+  // Destroy WITHOUT explicitly clearing the callbacks: destroy must release the
+  // driver-side install so the wrapper is fully removed.
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zelTracerDestroy(hTracer));
+  EXPECT_EQ(0u, installState(getState, hDriver))
+      << "destroy leaked the driver-side extension install";
+}
+
+TEST(ExtFnCallbackDestroyCleanup, DestroyKeepsCoRegisteredTracerInstalled) {
+  auto hDriver = getFirstDriver();
+  auto getState = getInstallStateFunc(hDriver);
+
+  ASSERT_EQ(0u, installState(getState, hDriver)) << "stale install at start";
+
+  CallbackState s1, s2;
+  auto hTracer1 = createTracer(&s1);
+  auto hTracer2 = createTracer(&s2);
+  registerEpilogueOnly(hTracer1, hDriver);
+  registerEpilogueOnly(hTracer2, hDriver);
+  EXPECT_EQ(0x2u, installState(getState, hDriver))
+      << "epilogue wrapper should be installed for two tracers";
+
+  // Destroying one co-registered tracer must NOT uninstall the shared wrapper.
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zelTracerDestroy(hTracer1));
+  EXPECT_EQ(0x2u, installState(getState, hDriver))
+      << "destroy removed a wrapper another tracer still holds";
+
+  // Destroying the last holder releases it.
+  EXPECT_EQ(ZE_RESULT_SUCCESS, zelTracerDestroy(hTracer2));
+  EXPECT_EQ(0u, installState(getState, hDriver))
+      << "last destroy did not release the wrapper";
+}
+
 }  // namespace

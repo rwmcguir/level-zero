@@ -12,6 +12,53 @@
 #include "layers/zel_tracing_ddi.h"
 #include "loader/ze_loader.h"
 
+namespace {
+// Applies a per-(driver, functionName) install-state change to the driver:
+// installs or clears the loader prologue/epilogue trampolines to match the
+// refcounted want-state. A no-op unless a phase crossed its 0<->1 boundary.
+// Shared by the register path and the destroy-time release path. The
+// epilogueInstalled hint is ordered around the driver update so a concurrent
+// call never builds an instance frame the driver won't hand back to an epilogue.
+ze_result_t applyLoaderExtensionInstall(
+    ze_driver_handle_t hDriver, const char *functionName,
+    const tracing_layer::LoaderExtensionInstallState &install) {
+    if (!install.prologueInstallChanged && !install.epilogueInstallChanged)
+        return ZE_RESULT_SUCCESS;
+
+    auto pfnGetExtensionFunctionAddress =
+        tracing_layer::context.zeDdiTable.Driver.pfnGetExtensionFunctionAddress;
+    if (nullptr == pfnGetExtensionFunctionAddress)
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+
+    void *pfnRaw = nullptr;
+    ze_result_t result = pfnGetExtensionFunctionAddress(
+        hDriver, "zelDriverSetLoaderCallbackForExtension", &pfnRaw);
+    if (result != ZE_RESULT_SUCCESS)
+        return result;
+    if (nullptr == pfnRaw)
+        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+    auto pfnSet =
+        reinterpret_cast<zel_pfnDriverSetLoaderCallbackForExtension_t>(pfnRaw);
+
+    zel_pfnDriverExtensionFunctionCb_t pfnPrologue =
+        install.wantPrologue ? &tracing_layer::loaderExtensionPrologue : nullptr;
+    zel_pfnDriverExtensionFunctionCb_t pfnEpilogue =
+        install.wantEpilogue ? &tracing_layer::loaderExtensionEpilogue : nullptr;
+    void *pLoaderContext =
+        (install.wantPrologue || install.wantEpilogue) ? install.ctx : nullptr;
+
+    if (install.epilogueInstallChanged && !install.wantEpilogue)
+        install.ctx->epilogueInstalled.store(false, std::memory_order_relaxed);
+
+    result = pfnSet(hDriver, functionName, pfnPrologue, pfnEpilogue, pLoaderContext);
+
+    if (install.epilogueInstallChanged && install.wantEpilogue)
+        install.ctx->epilogueInstalled.store(true, std::memory_order_relaxed);
+
+    return result;
+}
+} // namespace
+
 namespace tracing {
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zelTracerCreate(
@@ -23,7 +70,33 @@ zelTracerCreate(
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zelTracerDestroy(
     zel_tracer_handle_t hTracer) {
-    return tracing_layer::APITracer::fromHandle(hTracer)->destroyTracer(hTracer);
+    auto *tracer = tracing_layer::APITracer::fromHandle(hTracer);
+
+    // Snapshot the tracer's extension registrations BEFORE destroying it, so that
+    // once it is gone we can release its share of the shared driver-side install
+    // refcounts. Copying the keys keeps this valid after the tracer is freed.
+    auto registrations = tracer->snapshotExtensionRegistrations();
+
+    ze_result_t result = tracer->destroyTracer(hTracer);
+    if (result != ZE_RESULT_SUCCESS)
+        return result; // not destroyed (e.g. still enabled) -> leave install intact
+
+    // Release this tracer's refcount on each (driver, function) it registered.
+    // updateLoaderExtensionInstall clamps at zero and reports the 1->0 transition,
+    // so a driver phase is uninstalled ONLY when no other tracer still holds it --
+    // co-registered tracers keep their wrappers. Cleanup is best-effort: a driver
+    // resolution failure here does not fail the destroy.
+    for (auto &reg : registrations) {
+        int prologueDelta = reg.hasPrologue ? -1 : 0;
+        int epilogueDelta = reg.hasEpilogue ? -1 : 0;
+        if (prologueDelta == 0 && epilogueDelta == 0)
+            continue;
+        auto install = tracing_layer::updateLoaderExtensionInstall(
+            reg.hDriver, reg.functionName.c_str(), prologueDelta, epilogueDelta);
+        applyLoaderExtensionInstall(reg.hDriver, reg.functionName.c_str(),
+                                    install);
+    }
+    return result;
 }
 
 ZE_APIEXPORT ze_result_t ZE_APICALL
@@ -119,56 +192,13 @@ zelTracerDriverExtensionRegisterCallback(
     if( result != ZE_RESULT_SUCCESS )
         return result;
 
-    // Apply the per-phase deltas to the shared driver-side install refcounts.
-    // Nothing to do on the driver unless a phase just crossed its 0<->1 boundary
-    // (e.g. a 2nd tracer registering the same phase is idempotent).
+    // Apply the per-phase deltas to the shared driver-side install refcounts and
+    // install/clear the driver trampolines to match. Nothing happens on the driver
+    // unless a phase just crossed its 0<->1 boundary (a 2nd tracer registering the
+    // same phase is idempotent).
     auto install = tracing_layer::updateLoaderExtensionInstall(
         hDriver, functionName, prologueDelta, epilogueDelta );
-    if( !install.prologueInstallChanged && !install.epilogueInstallChanged )
-        return ZE_RESULT_SUCCESS;
-
-    // Resolve the driver's by-name loader-callback setter (same mechanism as the
-    // per-API GetExtensionFunctionAddress interceptor). Needed for both install
-    // and uninstall.
-    auto pfnGetExtensionFunctionAddress =
-        tracing_layer::context.zeDdiTable.Driver.pfnGetExtensionFunctionAddress;
-    if( nullptr == pfnGetExtensionFunctionAddress )
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
-
-    void* pfnRaw = nullptr;
-    result = pfnGetExtensionFunctionAddress(
-        hDriver, "zelDriverSetLoaderCallbackForExtension", &pfnRaw );
-    if( result != ZE_RESULT_SUCCESS )
-        return result;
-    if( nullptr == pfnRaw )
-        return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
-    auto pfnSet = reinterpret_cast<zel_pfnDriverSetLoaderCallbackForExtension_t>( pfnRaw );
-
-    // Install only the phase trampolines the app actually asked for: a null
-    // pointer tells the driver to skip that phase entirely (no call-through, no
-    // per-call frame allocation), which is the point of the split refcount. When
-    // both phases are gone the null/null pair clears the driver's registration.
-    zel_pfnDriverExtensionFunctionCb_t pfnPrologue =
-        install.wantPrologue ? &tracing_layer::loaderExtensionPrologue : nullptr;
-    zel_pfnDriverExtensionFunctionCb_t pfnEpilogue =
-        install.wantEpilogue ? &tracing_layer::loaderExtensionEpilogue : nullptr;
-    void* pLoaderContext =
-        ( install.wantPrologue || install.wantEpilogue ) ? install.ctx : nullptr;
-
-    // Order the epilogue-installed hint (read lock-free by the prologue wrapper to
-    // decide whether to build an instance frame) against the driver update so a
-    // concurrent call never builds a frame the driver won't hand back to an
-    // epilogue: when removing the epilogue clear the hint first; when installing it
-    // set the hint only after the driver already has the epilogue trampoline.
-    if( install.epilogueInstallChanged && !install.wantEpilogue )
-        install.ctx->epilogueInstalled.store( false, std::memory_order_relaxed );
-
-    result = pfnSet( hDriver, functionName, pfnPrologue, pfnEpilogue, pLoaderContext );
-
-    if( install.epilogueInstallChanged && install.wantEpilogue )
-        install.ctx->epilogueInstalled.store( true, std::memory_order_relaxed );
-
-    return result;
+    return applyLoaderExtensionInstall( hDriver, functionName, install );
 }
 
 ZE_DLLEXPORT ze_result_t ZE_APICALL

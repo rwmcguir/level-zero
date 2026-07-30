@@ -151,6 +151,14 @@ Extension-function tracing requires the driver to implement two hooks, discovera
 
 The loader probes these hooks at driver initialization. Drivers that do not implement them are treated as not supporting extension-function tracing, and __zelTracerDriverExtensionRegisterCallback__ returns `ZE_RESULT_ERROR_UNSUPPORTED_FEATURE`. The corresponding signatures (`zel_pfnDriverEnableTracing_t` and `zel_pfnDriverSetLoaderCallbackForExtension_t`) are defined in `include/loader/ze_loader.h`.
 
+#### Registration lifetime and cleanup on destroy
+
+The loader-owned wrapper installed on the driver for a given (driver, function) is **refcounted separately for the prologue and the epilogue** across all tracers: the prologue wrapper is installed when the first tracer registers a prologue and cleared when the last tracer stops registering one, and the epilogue wrapper likewise. A second tracer registering the same prologue (or epilogue) is idempotent (the wrapper is already installed), and one tracer clearing its slot does not disturb another tracer that still registers the same prologue or epilogue.
+
+__zelTracerDestroy__ releases the destroyed tracer's share of these refcounts automatically. An application does **not** have to clear each extension registration (by re-registering with a null `pCallback`) before destroying a tracer — destroying it decrements every prologue and epilogue it still held, and a driver-side wrapper is uninstalled only when its refcount reaches zero (i.e. no other tracer still registers that prologue or epilogue). This keeps co-registered tracers working and avoids leaving a wrapper installed after its only registrant is gone, which would otherwise force the driver to keep calling into the loader (and the loader to keep threading per-call instance data) for a function no tracer is watching. Destroying a tracer that never registered any extension callback has no effect on any driver wrapper.
+
+Registration state is independent of the enable state: registering installs the driver-side wrapper, and destroying releases it, regardless of whether the tracer or the tracing layer was ever enabled.
+
 ## Reset All Callbacks
 
 __zelTracerResetAllCallbacks(zel_tracer_handle_t hTracer)__ can be used to set ALL prologue and epilogue callback handlers to NULL.

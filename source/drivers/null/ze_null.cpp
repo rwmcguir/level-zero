@@ -74,6 +74,10 @@ namespace driver
                 *ppFunctionAddress = reinterpret_cast<void*>( &driver::zelTestGetDriverTracingEnableCount );
                 return ZE_RESULT_SUCCESS;
             }
+            if( 0 == strcmp( name, "zelTestGetDriverExtensionInstallState" ) ) {
+                *ppFunctionAddress = reinterpret_cast<void*>( &driver::zelTestGetDriverExtensionInstallState );
+                return ZE_RESULT_SUCCESS;
+            }
             *ppFunctionAddress = nullptr;
             return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
         };
@@ -781,6 +785,29 @@ namespace driver
         if( nullptr == pCount )
             return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
         *pCount = context.enableTracingTrueCount.load();
+        return ZE_RESULT_SUCCESS;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// @brief Test-only: report which loader wrapper phases are currently
+    ///        installed for a named extension function. *pFlags bit0 = prologue
+    ///        wrapper installed, bit1 = epilogue wrapper installed; 0 if the
+    ///        function has no loader wrapper registered at all.
+    ze_result_t ZE_APICALL zelTestGetDriverExtensionInstallState(
+        ze_driver_handle_t /*hDriver*/, const char* functionName, uint32_t* pFlags )
+    {
+        if( nullptr == functionName || nullptr == pFlags )
+            return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+        uint32_t flags = 0;
+        std::lock_guard<std::mutex> lock( context.extensionCallbackMutex );
+        auto it = context.extensionCallbacks.find( functionName );
+        if( it != context.extensionCallbacks.end() ) {
+            if( nullptr != it->second.loaderPrologue )
+                flags |= 0x1u;
+            if( nullptr != it->second.loaderEpilogue )
+                flags |= 0x2u;
+        }
+        *pFlags = flags;
         return ZE_RESULT_SUCCESS;
     }
 

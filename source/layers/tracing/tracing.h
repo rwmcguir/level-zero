@@ -14,10 +14,23 @@
 #include "ze_tracing_cb_structs.h"
 #include "zer_tracing_cb_structs.h"
 
+#include <string>
+#include <vector>
+
 struct _zel_tracer_handle_t {};
 
 #define TRACING_COMP_NAME "tracing layer"
 namespace tracing_layer {
+
+// A single (hDriver, functionName) extension registration a tracer still holds,
+// with which phases are live. Used to release the tracer's share of the shared
+// driver-side install refcounts when it is destroyed.
+struct TracerExtensionRegistration {
+    ze_driver_handle_t hDriver;
+    std::string functionName;
+    bool hasPrologue;
+    bool hasEpilogue;
+};
 
 struct APITracer : _zel_tracer_handle_t {
     static APITracer *create();
@@ -43,6 +56,11 @@ struct APITracer : _zel_tracer_handle_t {
                                                   zel_pfnDriverExtensionFunctionCb_t pCallback,
                                                   int *pPrologueDelta = nullptr,
                                                   int *pEpilogueDelta = nullptr) = 0;
+    // Returns a copy of every extension registration this tracer currently holds,
+    // so the caller can release the tracer's share of the driver-side install
+    // refcounts when it is destroyed.
+    virtual std::vector<TracerExtensionRegistration>
+    snapshotExtensionRegistrations() = 0;
 };
 
 ze_result_t createAPITracer(const zel_tracer_desc_t *desc, zel_tracer_handle_t *phTracer);
