@@ -351,12 +351,9 @@ namespace ze_lib
         }
 
         // Env-enabled tracing (ZE_ENABLE_TRACING_LAYER) never calls
-        // zelEnableTracingLayer, so propagate the extension-function tracing enable
-        // to each driver here. Drivers whose DDI tables were initialized via the
-        // proc-address-table setup above bypass init_driver (and its propagation),
-        // so this is the reliable point to open the driver-side tracing gate.
-        // Skipped until the first extension callback is registered; a later
-        // registration opens the gate via zelLoaderTracingLayerRegisterExtensionCallback.
+        // zelEnableTracingLayer, and proc-address-table drivers bypass init_driver,
+        // so open the driver-side gate here. Skipped until the first extension
+        // callback is registered (which then opens it).
 #ifndef L0_STATIC_LOADER_BUILD
         if (ZE_RESULT_SUCCESS == result && loader::context &&
             loader::context->tracingLayerEnabled &&
@@ -657,11 +654,8 @@ zelEnableTracingLayer()
         if (ze_lib::context->pTracingZerDdiTable != nullptr) {
             ze_lib::context->zerDdiTable.exchange(ze_lib::context->pTracingZerDdiTable);
         }
-        // Propagate the enable to each active driver's extension-function tracing,
-        // but only once an extension callback has been registered. The common
-        // case registers none, so this keeps the enable a plain DDI-table swap; a
-        // later registration opens the gate via
-        // zelLoaderTracingLayerRegisterExtensionCallback.
+        // Open per-driver gates, but only after an extension callback exists, so
+        // the common (no-callback) case stays a plain DDI-table swap.
         if (loader::context && loader::context->anyExtensionCallbackRegistered.load()) {
             for (auto &drv : loader::context->zeDrivers) {
                 loader::enableDriverExtensionTracing(drv, true);
@@ -730,11 +724,9 @@ zelDisableTracingLayer()
         if (ze_lib::context->pTracingZerDdiTable != nullptr) {
             ze_lib::context->zerDdiTable.exchange(&ze_lib::context->initialzerDdiTable);
         }
-        // Disable per-driver extension tracing, unless tracing was enabled
-        // statically via ZE_ENABLE_TRACING_LAYER (documented to stay on for the
-        // whole application) - respect that sticky state. Nothing to close until
-        // an extension callback has been registered (the enable path skipped the
-        // gate while the latch was false).
+        // Close per-driver gates, unless tracing was enabled statically via
+        // ZE_ENABLE_TRACING_LAYER (sticky for the app's life). Nothing to close
+        // until an extension callback has been registered.
         if (loader::context && !loader::context->tracingLayerEnabled &&
             loader::context->anyExtensionCallbackRegistered.load()) {
             for (auto &drv : loader::context->zeDrivers) {

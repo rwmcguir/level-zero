@@ -35,8 +35,7 @@ namespace tracing_layer {
 extern thread_local ze_bool_t tracingInProgress;
 extern struct APITracerContextImp *pGlobalAPITracerContextImp;
 
-// Identifies a traced extension function on a specific driver. Registration and
-// per-call fan-out are keyed by (hDriver, functionName) so a callback registered
+// Keys registration and per-call fan-out by (hDriver, functionName) so a callback
 // for one driver never fires for another driver's same-named function.
 struct ExtensionFunctionKey {
     ze_driver_handle_t hDriver;
@@ -55,20 +54,17 @@ struct ExtensionFunctionCallbacks {
 };
 
 // Loader-owned context echoed back by the driver to the wrapper functions so the
-// wrapper can recover which (hDriver, functionName) fired. Instances live for the
-// life of the process in a tracing-layer registry (addresses must stay stable).
+// wrapper can recover which (hDriver, functionName) fired. Lives for process life
+// in a tracing-layer registry (addresses must stay stable).
 struct LoaderExtensionContext {
     ze_driver_handle_t hDriver;
     std::string functionName;
-    // Lookup key built once at construction. Both wrapper functions run on every
-    // traced call, so precomputing the key here avoids copying functionName into a
-    // temporary ExtensionFunctionKey (and its heap allocation) on the hot path.
+    // Precomputed here to avoid rebuilding the key (a heap alloc) on every call.
     ExtensionFunctionKey key;
-    // True while the epilogue trampoline is installed on the driver for this key.
-    // Read (lock-free) by the prologue wrapper to decide whether to allocate a
-    // per-call frame that threads instance data to the epilogue; written under the
-    // registry mutex with careful ordering in ze_tracing.cpp so a concurrent call
-    // never builds a frame the driver will not hand back to an epilogue.
+    // True while the driver has the epilogue trampoline. Read lock-free by the
+    // prologue wrapper to decide whether to build a per-call instance frame;
+    // written under the registry mutex, ordered in ze_tracing.cpp so a concurrent
+    // call never builds a frame the driver won't hand back to an epilogue.
     std::atomic<bool> epilogueInstalled{false};
     LoaderExtensionContext(ze_driver_handle_t driver, const char *name)
         : hDriver(driver), functionName(name), key{driver, name} {}

@@ -13,10 +13,8 @@
 #include "loader/ze_loader.h"
 
 namespace {
-// Applies a per-(driver, functionName) install-state change to the driver:
-// installs or clears the loader prologue/epilogue trampolines to match the
-// refcounted want-state. A no-op unless a phase crossed its 0<->1 boundary.
-// Shared by the register path and the destroy-time release path. The
+// Installs/clears the driver's prologue/epilogue trampolines to match the
+// refcounted want-state; no-op unless a phase crossed its 0<->1 boundary. The
 // epilogueInstalled hint is ordered around the driver update so a concurrent
 // call never builds an instance frame the driver won't hand back to an epilogue.
 ze_result_t applyLoaderExtensionInstall(
@@ -72,20 +70,17 @@ zelTracerDestroy(
     zel_tracer_handle_t hTracer) {
     auto *tracer = tracing_layer::APITracer::fromHandle(hTracer);
 
-    // Snapshot the tracer's extension registrations BEFORE destroying it, so that
-    // once it is gone we can release its share of the shared driver-side install
-    // refcounts. Copying the keys keeps this valid after the tracer is freed.
+    // Snapshot registrations before destroy so we can release their refcounts
+    // after the tracer is freed (the copied keys stay valid).
     auto registrations = tracer->snapshotExtensionRegistrations();
 
     ze_result_t result = tracer->destroyTracer(hTracer);
     if (result != ZE_RESULT_SUCCESS)
         return result; // not destroyed (e.g. still enabled) -> leave install intact
 
-    // Release this tracer's refcount on each (driver, function) it registered.
-    // updateLoaderExtensionInstall clamps at zero and reports the 1->0 transition,
-    // so a driver phase is uninstalled ONLY when no other tracer still holds it --
-    // co-registered tracers keep their wrappers. Cleanup is best-effort: a driver
-    // resolution failure here does not fail the destroy.
+    // Release this tracer's refcount on each registration. A driver wrapper is
+    // uninstalled only on the 1->0 transition, so co-registered tracers keep
+    // theirs. Best-effort: a driver resolution failure does not fail the destroy.
     for (auto &reg : registrations) {
         int prologueDelta = reg.hasPrologue ? -1 : 0;
         int epilogueDelta = reg.hasEpilogue ? -1 : 0;
@@ -179,11 +174,9 @@ zelTracerDriverExtensionRegisterCallback(
     if( nullptr == functionName )
         return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
 
-    // Record the app callback on the tracer (only valid while disabled). The
-    // per-phase deltas report whether this tracer just began (+1) or stopped (-1)
-    // tracing the prologue and/or epilogue of this (hDriver, functionName), so the
-    // shared driver-side wrappers can be refcounted per phase across all tracers.
-    // A single call changes at most one phase.
+    // Record the callback on the tracer; the deltas report this tracer's +1/-1
+    // transition for the prologue/epilogue so the driver wrappers can be
+    // refcounted across tracers. A single call changes at most one of them.
     int prologueDelta = 0;
     int epilogueDelta = 0;
     ze_result_t result = tracing_layer::APITracer::fromHandle(hTracer)
@@ -192,10 +185,8 @@ zelTracerDriverExtensionRegisterCallback(
     if( result != ZE_RESULT_SUCCESS )
         return result;
 
-    // Apply the per-phase deltas to the shared driver-side install refcounts and
-    // install/clear the driver trampolines to match. Nothing happens on the driver
-    // unless a phase just crossed its 0<->1 boundary (a 2nd tracer registering the
-    // same phase is idempotent).
+    // Apply the deltas to the shared refcounts and install/clear the driver
+    // trampolines to match.
     auto install = tracing_layer::updateLoaderExtensionInstall(
         hDriver, functionName, prologueDelta, epilogueDelta );
     return applyLoaderExtensionInstall( hDriver, functionName, install );

@@ -53,12 +53,9 @@ namespace driver
 	bool ddiExtensionSupported = false;
 	std::vector<char *> env_vars{};
 
-        // Registry for zelDriverSetLoaderCallbackForExtension: maps an extension
-        // function name to the single loader-owned wrapper the driver invokes
-        // from that function's body. The loader/tracing-layer owns the fan-out to
-        // any number of tracers, so the driver stores at most one wrapper (plus
-        // an opaque loader context) per function. Keyed by name (order-
-        // independent vs fetch).
+        // zelDriverSetLoaderCallbackForExtension registry: function name -> the
+        // single loader wrapper the driver invokes (the loader owns the tracer
+        // fan-out, so at most one wrapper + opaque context per function).
         struct loader_extension_callbacks_t {
             zel_pfnDriverExtensionFunctionCb_t loaderPrologue = nullptr;
             zel_pfnDriverExtensionFunctionCb_t loaderEpilogue = nullptr;
@@ -67,16 +64,12 @@ namespace driver
         std::mutex extensionCallbackMutex;
         std::map<std::string, loader_extension_callbacks_t> extensionCallbacks;
 
-        // Global gate for extension-function callbacks, toggled by the loader via
-        // zelDriverEnableTracing. Callbacks fire only when this is set AND a
-        // callback is registered for the function (two-level gate).
+        // Global gate toggled by the loader via zelDriverEnableTracing; callbacks
+        // fire only when this is set AND a callback is registered (two-level gate).
         std::atomic<bool> extensionCallbacksEnabled{false};
 
-        // Test observability: counts how many times the loader opened this
-        // driver's extension-tracing gate (zelDriverEnableTracing with
-        // enable=true). Exposed by name via "zelTestGetDriverTracingEnableCount"
-        // so tests can assert the loader skips the gate until a callback is
-        // registered (the lazy-gate optimization).
+        // Test observability: gate-open count, exposed via
+        // "zelTestGetDriverTracingEnableCount" to assert the lazy-gate optimization.
         std::atomic<uint32_t> enableTracingTrueCount{0};
 
         context_t();

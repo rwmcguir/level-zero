@@ -22,9 +22,8 @@ struct _zel_tracer_handle_t {};
 #define TRACING_COMP_NAME "tracing layer"
 namespace tracing_layer {
 
-// A single (hDriver, functionName) extension registration a tracer still holds,
-// with which phases are live. Used to release the tracer's share of the shared
-// driver-side install refcounts when it is destroyed.
+// An extension registration a tracer still holds, used to release its share of
+// the driver-side install refcounts on destroy.
 struct TracerExtensionRegistration {
     ze_driver_handle_t hDriver;
     std::string functionName;
@@ -44,21 +43,17 @@ struct APITracer : _zel_tracer_handle_t {
     virtual zel_zer_all_callbacks_t& getZerProEpilogues(zel_tracer_reg_t callback_type, ze_result_t& result) = 0;
     virtual ze_result_t resetAllCallbacks() = 0;
     virtual ze_result_t enableTracer(ze_bool_t enable) = 0;
-    // Records/clears one extension-function prologue or epilogue slot for
-    // (hDriver, functionName). pPrologueDelta / pEpilogueDelta (optional) each
-    // report whether this tracer's slot for that phase transitioned empty->active
-    // (+1), active->empty (-1), or was unchanged (0), so the caller can refcount
-    // the driver-side wrapper install/uninstall per phase. A single call changes
-    // at most one phase.
+    // Records/clears one prologue or epilogue slot for (hDriver, functionName).
+    // pPrologueDelta/pEpilogueDelta (optional) report this tracer's +1/-1/0
+    // transition for that slot, for refcounting the driver wrapper.
     virtual ze_result_t registerExtensionCallback(ze_driver_handle_t hDriver,
                                                   const char *functionName,
                                                   zel_tracer_reg_t callback_type,
                                                   zel_pfnDriverExtensionFunctionCb_t pCallback,
                                                   int *pPrologueDelta = nullptr,
                                                   int *pEpilogueDelta = nullptr) = 0;
-    // Returns a copy of every extension registration this tracer currently holds,
-    // so the caller can release the tracer's share of the driver-side install
-    // refcounts when it is destroyed.
+    // Copy of every extension registration this tracer holds, for releasing its
+    // driver-side install refcounts on destroy.
     virtual std::vector<TracerExtensionRegistration>
     snapshotExtensionRegistrations() = 0;
 };

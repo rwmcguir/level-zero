@@ -206,11 +206,9 @@ zelTracerDriverExtensionRegisterCallback(
 
     ze_result_t result = func( hTracer, hDriver, functionName, callback_type, pCallback );
     if( result == ZE_RESULT_SUCCESS ) {
-        // Notify the loader that an extension callback now exists, so the
-        // tracing-layer enable/disable toggle paths resume propagating the
-        // per-driver gate (they skip it while no extension callback is
-        // registered). Handles install-after-enable ordering. The loader owns
-        // the driver-side gate, so this must reach loader code in both builds.
+        // Latch the first extension callback in the loader (which owns the gate),
+        // so the toggle paths resume gate propagation. Must reach loader code in
+        // both builds; handles install-after-enable ordering.
     #ifdef L0_STATIC_LOADER_BUILD
         if( ze_lib::context->loader ) {
             typedef ze_result_t (ZE_APICALL *notify_t)();

@@ -68,20 +68,15 @@ zelLoaderTracingLayerRegisterExtensionCallback() {
     if (nullptr == loader::context)
         return ZE_RESULT_ERROR_UNINITIALIZED;
 
-    // Monotonic latch: once any extension callback is registered, the toggle
-    // paths resume propagating the per-driver gate. Only the 0 -> 1 transition
-    // needs to open gates now; later registrations are cheap no-ops here.
+    // Latch the first registration; later ones are no-ops here.
     bool wasRegistered = loader::context->anyExtensionCallbackRegistered.exchange(true);
     if (wasRegistered)
         return ZE_RESULT_SUCCESS;
 
-    // First registration. If the tracing layer is already active (statically via
-    // ZE_ENABLE_TRACING_LAYER, or dynamically via zelEnableTracingLayer), the
-    // enable path already ran and skipped the per-driver loop because the latch
-    // was false, so open the driver-side gate now (install-after-enable
-    // ordering). Otherwise a subsequent enable opens it. This runs inside the
-    // loader binary, so ze_lib::context->tracingLayerEnableCounter reflects the
-    // authoritative dynamic-enable state for both the dynamic and static builds.
+    // If the layer is already active, the enable path skipped the per-driver loop
+    // while the latch was false, so open the gates now (install-after-enable).
+    // Runs inside the loader, so tracingLayerEnableCounter is authoritative for
+    // both static and dynamic builds.
     if (loader::context->tracingLayerEnabled ||
         (ze_lib::context && ze_lib::context->tracingLayerEnableCounter.load() > 0)) {
         for (auto &drv : loader::context->zeDrivers) {
