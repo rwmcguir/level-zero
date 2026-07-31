@@ -19,7 +19,6 @@
 
 namespace loader
 {
-    // TEMPORARY codespell CI test: intentionaly misspelled word, remove before merge.
     ze_handle_t* loaderDispatch = nullptr;
     zer_dditable_t *defaultZerDdiTable = nullptr;
     ///////////////////////////////////////////////////////////////////////////////
