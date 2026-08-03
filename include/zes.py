@@ -1070,7 +1070,7 @@ class zes_fabric_port_failure_flags_t(c_int):
 ## @brief Unique identifier for a fabric port
 ## 
 ## @details
-##     - This not a universal identifier. The identified is guaranteed to be
+##     - This is not a universal identifier. The identified is guaranteed to be
 ##       unique for the current hardware configuration of the system. Changes
 ##       in the hardware may result in a different identifier for a given port.
 ##     - The main purpose of this identifier to build up an instantaneous

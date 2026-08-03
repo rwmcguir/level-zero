@@ -16455,7 +16455,7 @@ typedef struct _ze_device_usablemem_size_ext_properties_t
                                                                             ///< structure (i.e. contains stype and pNext).
     uint64_t currUsableMemSize;                                             ///< [out] Returns the available usable memory at the device level. This is
                                                                             ///< typically less than or equal to the available physical memory on the
-                                                                            ///< device. It important to note that usable memory size reported is
+                                                                            ///< device. It is important to note that usable memory size reported is
                                                                             ///< transient in nature and cannot be used to reliably guarantee success
                                                                             ///< of future allocations. The usable memory includes all the memory that
                                                                             ///< the clients can allocate for their use and by L0 Core for its internal

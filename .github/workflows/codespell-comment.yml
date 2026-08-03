@@ -17,8 +17,9 @@ on:
     types: [completed]
 
 permissions:
+  actions: read          # download the report artifact from the triggering run
   contents: read
-  pull-requests: write
+  pull-requests: write   # comment on the pull request (issues API, PR target)
 
 jobs:
   comment:
