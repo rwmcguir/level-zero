@@ -67,6 +67,10 @@ namespace loader
         ze_result_t zetddiInitResult = ZE_RESULT_ERROR_UNINITIALIZED;
         ze_result_t zesddiInitResult = ZE_RESULT_ERROR_UNINITIALIZED;
         ze_result_t zerddiInitResult = ZE_RESULT_ERROR_UNINITIALIZED;
+        // Set once the driver has been explicitly unloaded via zelUnloadDriver. Distinguishes a
+        // tombstoned slot from a not-yet-loaded one (both have handle==nullptr) so the loader
+        // never reloads it and skips it during ordering/enumeration.
+        bool unloaded = false;
     };
 
     using driver_vector_t = std::vector< driver_t >;
